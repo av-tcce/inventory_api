@@ -1,12 +1,18 @@
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response, StreamingResponse, FileResponse
 from models.schemas import RequestDistribucion, ResponseDistribucion
 from services.algorithm import distribuir_inventario
 from services.sabana_service import generate_sabana_mto
 from services.unit_request_service import generate_unit_request
 from services.outlet_service import generate_sabana_outlet
+from services.devolucion_outlets import procesar_devolucion
+from services.devolucion_outlets import procesar_devolucion
+from services.agotados_service import get_necesidad_data, generate_agotados_excel
+from services.clasificacion_service import get_clasificacion_data, generate_clasificacion_excel
+from services.sales_report_service import get_sales_analytics
 import pandas as pd
 import io
+import os
 from datetime import datetime
 
 router = APIRouter()
@@ -437,4 +443,177 @@ async def generate_sabana_outlet_endpoint(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error generando Sabana Outlet: {str(e)}")
+
+
+@router.post("/procesar-devolucion", tags=["Devolucion Outlets"])
+async def procesar_devolucion_endpoint(
+    file: UploadFile = File(..., description="Archivo Excel de inventario"),
+    formatos: str = Form("[]", description="Lista de formatos seleccionados en formato JSON"),
+    grupos: str = Form("[]", description="Lista de grupos seleccionados en formato JSON"),
+    periodo: str = Form("mes_anterior", description="Periodo de ventas: mes_anterior o ultimos_30_dias")
+):
+    import json
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel (.xlsx o .xls)")
+    
+    try:
+        formatos_list = json.loads(formatos)
+    except Exception:
+        formatos_list = []
+
+    try:
+        grupos_list = json.loads(grupos)
+    except Exception:
+        grupos_list = []
+
+    try:
+        content = await file.read()
+        resultado = procesar_devolucion(content, formatos_list, grupos_list, periodo)
+        return resultado
+    except ValueError as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(e))
+    except ConnectionError as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error procesando devolución: {str(e)}")
+
+
+@router.get("/descargar-devolucion", tags=["Devolucion Outlets"])
+async def descargar_devolucion_endpoint():
+    file_path = "resultado_devolucion.xlsx"
+    if os.path.exists(file_path):
+        return FileResponse(
+            path=file_path,
+            filename="resultado_devolucion.xlsx",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    raise HTTPException(status_code=404, detail="Archivo no encontrado.")
+
+
+@router.get("/agotados/report", tags=["Buscador de Agotados"])
+def get_agotados_report(fecha: str, formatos: str = None, grupos: str = None, tipo: str = 'necesidad'):
+    """
+    Retorna los datos de necesidad, agotados o desmatriculados para una fecha y filtros.
+    Limitado a los primeros 1000 registros para la vista previa.
+    """
+    import json
+    try:
+        formatos_list = json.loads(formatos) if formatos else None
+        grupos_list = json.loads(grupos) if grupos else None
+        
+        df = get_necesidad_data(fecha, formatos_list, grupos_list, tipo)
+        # Convertimos fechas a string para JSON
+        if not df.empty and 'FECHA' in df.columns:
+            df['FECHA'] = df['FECHA'].astype(str)
+        
+        # Retornamos un subset para la tabla y el total de filas
+        total_rows = len(df)
+        data = df.head(1000).to_dict(orient="records")
+        
+        return {
+            "total": total_rows,
+            "data": data
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agotados/export", tags=["Buscador de Agotados"])
+def export_agotados(fecha: str, formatos: str = None, grupos: str = None, tipo: str = 'necesidad'):
+    """
+    Genera y descarga el archivo Excel completo según el tipo de reporte.
+    """
+    import json
+    try:
+        formatos_list = json.loads(formatos) if formatos else None
+        grupos_list = json.loads(grupos) if grupos else None
+        
+        df = get_necesidad_data(fecha, formatos_list, grupos_list, tipo)
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para la fecha seleccionada.")
+            
+        output = generate_agotados_excel(df)
+        
+        filename = f"Necesidad_Tiendas_{fecha}.xlsx"
+        headers = {
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+        
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/clasificacion/report", tags=["Clasificación"])
+def get_clasificacion_report(fecha: str, referencia: str = None):
+    """
+    Retorna los datos de clasificación y estadísticas para la última carga de la semana de la fecha.
+    """
+    try:
+        df, stats = get_clasificacion_data(fecha, referencia)
+        
+        # Convertimos fechas a string para JSON si existen
+        for col in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = df[col].astype(str)
+                
+        return {
+            "total": stats.get("total", 0),
+            "stats": stats,
+            "data": df.head(1000).to_dict(orient='records')
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/clasificacion/export", tags=["Clasificación"])
+def export_clasificacion(fecha: str, referencia: str = None):
+    """
+    Genera y descarga el archivo Excel completo de clasificación (semana/referencia).
+    """
+    try:
+        df, stats = get_clasificacion_data(fecha, referencia)
+        if df.empty:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para los filtros seleccionados.")
+            
+        output = generate_clasificacion_excel(df)
+        
+        # Usar la fecha real de carga encontrada si es posible
+        display_date = stats.get("ultima_fecha_semana", fecha)
+        filename = f"Clasificacion_{display_date}.xlsx"
+        if referencia:
+            filename = f"Clasificacion_{display_date}_{referencia}.xlsx"
+            
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sales/analytics", tags=["Análisis de Ventas"])
+def get_sales_report(inicio: str, fin: str, formatos: str = None, grupos: str = None):
+    """
+    Retorna el reporte analítico de ventas por formato y grupo para un rango de fechas.
+    """
+    import json
+    try:
+        formatos_list = json.loads(formatos) if formatos else None
+        grupos_list = json.loads(grupos) if grupos else None
+        
+        result = get_sales_analytics(inicio, fin, formatos_list, grupos_list)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

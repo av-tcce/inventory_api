@@ -252,13 +252,23 @@ def generate_unit_request(
     columnas_talla = [col for col in df_resultado.columns if col.endswith('_TALLA')]
     df_resultado[columnas_talla] = df_resultado[columnas_talla].fillna(0)
 
-    # Grupo mayor a 100
+    # Grupo mayor a 100 (Optimizado con fallback)
     grupos = [f'grupo{i}' for i in range(len(jerarquia), 1, -1)]
     def obtener_primer_grupo(row):
+        # 1. Intentar encontrar el primer grupo que supere el umbral de 100 unidades (Jerarquía más específica)
         for nombre in grupos:
             if row[nombre] > 100:
                 return nombre
-        return 'ninguno'
+        
+        # 2. Fallback: Si ninguno llega a 100, buscar el que tenga el valor máximo (aunque sea pequeño)
+        max_val = -1
+        mejor_grupo = 'ninguno'
+        for nombre in grupos:
+            if row[nombre] > max_val and row[nombre] > 0:
+                max_val = row[nombre]
+                mejor_grupo = nombre
+        
+        return mejor_grupo
 
     df_resultado['GRUPO_MAYOR_100'] = df_resultado.apply(obtener_primer_grupo, axis=1)
 
@@ -272,6 +282,12 @@ def generate_unit_request(
         return talla / base if base else np.nan
 
     df_resultado['PARTICIPACION_TALLA'] = df_resultado.apply(calcular_ratio, axis=1)
+    
+    # Fallback final: Si la categoría NO tiene ventas en absoluto (referencia muy nueva o nicho)
+    # se asigna una distribución uniforme (1 / cantidad de tallas) para evitar blancos.
+    df_resultado['PARTICIPACION_TALLA'] = df_resultado.groupby(['CODIGO', 'CDCDGO'])['PARTICIPACION_TALLA'].transform(
+        lambda x: x.fillna(1.0 / len(x)) if x.isnull().all() else x
+    )
 
     # Suavizado y rellenos
     df_resultado['PREV'] = df_resultado.groupby(['CODIGO', 'CDCDGO'])['PARTICIPACION_TALLA'].shift(1)

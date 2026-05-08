@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from routes.api import router
 
 app = FastAPI(
@@ -16,6 +16,13 @@ app.include_router(router)
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse("static/index.html")
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor", "error": str(exc)}
+    )
 
 if __name__ == "__main__":
     import uvicorn
