@@ -24,6 +24,9 @@ class Config:
     STOCKS_PASSWORD = os.getenv("STOCKS_PASSWORD", "Intel1genc1@")
 
     DB_DRIVER = os.getenv("DB_DRIVER", "{ODBC Driver 17 for SQL Server}")
+    
+    # Archivo Excel para el módulo Trivia
+    TRIVIA_EXCEL_PATH = os.getenv("TRIVIA_EXCEL_PATH", r"C:\Users\Ander\Downloads\BD PREGUNTAS.xlsx")
 
     @classmethod
     def get_connection_string(cls, server="default"):

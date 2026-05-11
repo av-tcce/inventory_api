@@ -570,6 +570,7 @@
       margin-top: 4px;
     }
   </style>
+  <link rel="stylesheet" href="/static/trivia.css">
 </head>
 
 <body>
@@ -628,7 +629,12 @@
             <i data-lucide="tag"></i>
             Clasificación de Productos
           </button>
-          <button type="button" class="nav-item" data-target="module-ajustes"
+                    <button type="button" class="nav-item" data-target="module-trivia"
+            onclick="switchModule('module-trivia', this)">
+            <i data-lucide="gamepad-2"></i>
+            Juego Trivia
+          </button>
+<button type="button" class="nav-item" data-target="module-ajustes"
             onclick="switchModule('module-ajustes', this)">
             <i data-lucide="settings"></i>
             Ajustes y Configuraciones
@@ -1593,7 +1599,32 @@
           </div>
         </section>
 
-        <section id="module-ajustes" class="module-panel">
+        
+        <section id="module-trivia" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">T</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6)">
+                <i data-lucide="gamepad-2"></i>
+              </div>
+              <div class="card-title">Trivia Master</div>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="font-weight:600; font-size:18px;">Puntos: <span id="score" style="color:var(--primary);">0</span></div>
+            </div>
+            
+            <div id="loading" class="loader" style="margin:40px auto; border-top-color:var(--primary); display:block;"></div>
+            
+            <div id="game-area" style="display: none; background:var(--surface); border:1px solid var(--border); padding:30px; border-radius:var(--radius-md); text-align:center;">
+                <div id="question-text" style="font-size:20px; font-weight:600; margin-bottom:24px; color:var(--text-main);">Cargando pregunta...</div>
+                <div id="options-container" class="options-grid" style="display:grid; gap:12px; grid-template-columns:1fr;"></div>
+                <div id="feedback" style="margin-top:20px; font-weight:600; min-height:24px;"></div>
+                <button id="next-btn" class="btn btn-primary" style="margin-top:24px; width:100%; display:none;">Siguiente Pregunta ➔</button>
+            </div>
+          </div>
+        </section>
+<section id="module-ajustes" class="module-panel">
           <div class="card">
             <div class="card-step">03</div>
             <div class="card-header">
@@ -2622,6 +2653,7 @@
     }
   </script>
 
+<script src="/static/trivia.js"></script>
 </body>
 
 </html>

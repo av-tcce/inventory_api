@@ -1,0 +1,127 @@
+/* Estilos Visuales para el Módulo Trivia */
+
+#game-area {
+    /* Fondo azul vibrante pedido por el usuario */
+    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 20px !important;
+    padding: 40px !important;
+    box-shadow: 0 20px 40px -10px rgba(30, 58, 138, 0.4) !important;
+    color: #ffffff !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efecto de brillo en el fondo */
+#game-area::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+#question-text {
+    color: #ffffff !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin-bottom: 30px !important;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.option-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f8fafc;
+    padding: 18px 24px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+}
+
+/* Hover: cambia a un azul más claro/brillante y crece un poco */
+.option-btn:hover:not(:disabled) {
+    background: #3b82f6; /* Cambio de color notable */
+    border-color: #60a5fa;
+    color: white;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.5);
+}
+
+.option-btn:active:not(:disabled) {
+    transform: translateY(0) scale(1);
+}
+
+.option-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.option-btn.correct {
+    background: rgba(16, 185, 129, 0.9) !important;
+    border-color: #34d399 !important;
+    color: white !important;
+    font-weight: 700;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.option-btn.wrong {
+    background: rgba(239, 68, 68, 0.9) !important;
+    border-color: #f87171 !important;
+    color: white !important;
+    font-weight: 700;
+}
+
+#feedback {
+    font-size: 18px;
+    margin-top: 25px !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.feedback-correct {
+    color: #34d399 !important;
+}
+
+.feedback-wrong {
+    color: #fca5a5 !important;
+}
+
+#next-btn {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+    font-size: 16px !important;
+    padding: 16px !important;
+    margin-top: 30px !important;
+}
+
+#next-btn:hover {
+    background: linear-gradient(135deg, #34d399, #10b981) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important;
+}
+
+#score {
+    font-weight: 800;
+    font-size: 24px;
+    background: linear-gradient(to right, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

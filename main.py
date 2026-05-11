@@ -13,6 +13,9 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(router)
 
+from routes.game import router as game_router
+app.include_router(game_router)
+
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse("static/index.html")
