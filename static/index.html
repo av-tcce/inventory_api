@@ -114,6 +114,34 @@
       min-width: 20px;
     }
 
+    /* Estilos del submenú */
+    .submenu {
+      background: rgba(0, 0, 0, 0.02);
+      border-left: 2px solid var(--border);
+      margin-top: 4px;
+      margin-bottom: 4px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+      border-radius: 0 4px 4px 0;
+    }
+    .submenu .nav-item {
+      padding-left: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .submenu .nav-item:hover {
+      background: rgba(30, 58, 138, 0.03);
+      color: var(--primary);
+    }
+    .submenu .nav-item.active {
+      color: var(--primary);
+      font-weight: 600;
+      background: rgba(30, 58, 138, 0.05);
+    }
+    .submenu-icon {
+      transition: transform 0.2s ease;
+    }
+
     .page-content {
       display: flex;
       flex-direction: column;
@@ -590,10 +618,28 @@
             Distribución de Inventario
           </button>
           <button type="button" class="nav-item" data-target="module-reportes"
-            onclick="switchModule('module-reportes', this)">
+            onclick="toggleSubmenu('submenu-reportes')">
             <i data-lucide="bar-chart-2"></i>
             Reportes y Análisis
+            <i data-lucide="chevron-down" class="submenu-icon" style="margin-left:auto;"></i>
           </button>
+          <div id="submenu-reportes" class="submenu" style="display:none; margin-left:16px;">
+            <button type="button" class="nav-item" data-target="module-agotados"
+              onclick="switchModule('module-agotados', this)">
+              <i data-lucide="search"></i>
+              Consulta de Agotados
+            </button>
+            <button type="button" class="nav-item" data-target="module-sales-analytics"
+              onclick="switchModule('module-sales-analytics', this)">
+              <i data-lucide="trending-up"></i>
+              Análisis de Ventas
+            </button>
+            <button type="button" class="nav-item" data-target="module-clasificacion"
+              onclick="switchModule('module-clasificacion', this)">
+              <i data-lucide="tag"></i>
+              Clasificación de Productos
+            </button>
+          </div>
           <button type="button" class="nav-item" data-target="module-sabana"
             onclick="switchModule('module-sabana', this)">
             <i data-lucide="database"></i>
@@ -612,23 +658,9 @@
           <button type="button" class="nav-item" data-target="module-devolucion"
             onclick="switchModule('module-devolucion', this)">
             <i data-lucide="corner-down-left"></i>
-            Devolución Outlets
+            Devoluciones Tiendas y Outlets
           </button>
-          <button type="button" class="nav-item" data-target="module-sales-analytics"
-            onclick="switchModule('module-sales-analytics', this)">
-            <i data-lucide="trending-up"></i>
-            Análisis de Ventas
-          </button>
-          <button type="button" class="nav-item" data-target="module-agotados"
-            onclick="switchModule('module-agotados', this)">
-            <i data-lucide="search"></i>
-            Consulta de Agotados
-          </button>
-          <button type="button" class="nav-item" data-target="module-clasificacion"
-            onclick="switchModule('module-clasificacion', this)">
-            <i data-lucide="tag"></i>
-            Clasificación de Productos
-          </button>
+
                     <button type="button" class="nav-item" data-target="module-trivia"
             onclick="switchModule('module-trivia', this)">
             <i data-lucide="gamepad-2"></i>
@@ -1082,7 +1114,7 @@
               <div class="icon-box" style="background: linear-gradient(135deg, var(--danger), var(--warning))">
                 <i data-lucide="corner-down-left"></i>
               </div>
-              <div class="card-title">Devolución Outlets</div>
+              <div class="card-title">Devoluciones Tiendas y Outlets</div>
             </div>
 
             <div
@@ -2118,6 +2150,21 @@
         loader.style.display = 'none';
         text.style.display = 'block';
         lucide.createIcons();
+      }
+    }
+
+    // Toggle Submenu function
+    function toggleSubmenu(id) {
+      const submenu = document.getElementById(id);
+      if (!submenu) return;
+      
+      const isVisible = submenu.style.display === 'block';
+      submenu.style.display = isVisible ? 'none' : 'block';
+      
+      const button = submenu.previousElementSibling;
+      const icon = button.querySelector('.submenu-icon');
+      if (icon) {
+        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
       }
     }
 
