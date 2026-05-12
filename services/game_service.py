@@ -14,15 +14,28 @@ class GameService:
         try:
             df = pd.read_excel(self.excel_path)
             
-            # Limpiar nombres de columnas por si acaso
-            df.columns = [str(c).strip() for c in df.columns]
-            
-            # La estructura esperada: ['Preguntas', 'Respuestas', 'Correcta']
-            if 'Preguntas' not in df.columns or 'Respuestas' not in df.columns:
-                raise ValueError("El Excel no tiene las columnas 'Preguntas' y 'Respuestas'")
-            
-            self.questions_db = {}
-            
+            # Normalizar nombres de columnas (quitar acentos, minúsculas, espacios)
+            normalized_cols = []
+            for c in df.columns:
+                col = str(c).strip()
+                col = col.replace('Á', 'A').replace('á', 'a')
+                col = col.lower()
+                normalized_cols.append(col)
+            df.columns = normalized_cols
+            # Renombrar columnas esperadas a nombres consistentes
+            rename_map = {}
+            if 'preguntas' in df.columns:
+                rename_map['preguntas'] = 'Preguntas'
+            if 'respuestas' in df.columns:
+                rename_map['respuestas'] = 'Respuestas'
+            if 'correcta' in df.columns:
+                rename_map['correcta'] = 'Correcta'
+            if 'area de conocimiento' in df.columns:
+                rename_map['area de conocimiento'] = 'Area de conocimiento'
+            df.rename(columns=rename_map, inplace=True)
+            # Añadir columna de área por defecto si falta
+            if 'Area de conocimiento' not in df.columns:
+                df['Area de conocimiento'] = 'General'            
             # Agrupar por la pregunta
             for pregunta, group in df.groupby('Preguntas'):
                 opciones = []
@@ -41,11 +54,24 @@ class GameService:
                 # Solo guardamos la pregunta si tiene opciones y al menos una correcta
                 if opciones and respuesta_correcta:
                     q_id = str(uuid.uuid4()) # ID unico para que el frontend no mande todo el texto si no quiere
+                    
+                    # Detect column for Área de conocimiento (case/accent insensitive)
+                    area_col = None
+                    for col in group.columns:
+                        col_norm = col.lower().replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
+                        if 'area' in col_norm and 'conocimiento' in col_norm:
+                            area_col = col
+                            break
+                    area = str(group[area_col].iloc[0]).strip() if area_col else "General"
+                    if not area or area.lower() == 'nan':
+                        area = "General"
+
                     self.questions_db[q_id] = {
                         "id": q_id,
                         "pregunta": str(pregunta).strip(),
                         "opciones": opciones,
-                        "correcta": respuesta_correcta
+                        "correcta": respuesta_correcta,
+                        "area_conocimiento": area
                     }
                     
         except Exception as e:
@@ -70,7 +96,8 @@ class GameService:
         return {
             "id": q_data["id"],
             "pregunta": q_data["pregunta"],
-            "opciones": opciones_desordenadas
+            "opciones": opciones_desordenadas,
+            "area_conocimiento": q_data.get("area_conocimiento", "General")
         }
 
     def validate_answer(self, q_id: str, respuesta_usuario: str):

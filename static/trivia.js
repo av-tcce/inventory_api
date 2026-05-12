@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreElement = document.getElementById('score');
     const loadingEl = document.getElementById('loading');
     const gameArea = document.getElementById('game-area');
+    const knowledgeBadge = document.getElementById('knowledge-area-badge');
 
     let currentQuestionId = null;
     let score = 0;
@@ -36,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
             currentQuestionId = data.id;
             
             questionText.textContent = data.pregunta;
+            if (knowledgeBadge) {
+                knowledgeBadge.textContent = data.area_conocimiento || "General";
+            }
             
             data.opciones.forEach((optionText, index) => {
                 const btn = document.createElement('button');
@@ -71,6 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await response.json();
+            console.log("Respuesta de validación:", data); // Debug para consola
+
+            // Buscamos la respuesta correcta en varios posibles campos por si acaso
+            const respuestaCorrecta = data.respuesta_correcta || data.correcta || "la indicada en el archivo";
 
             if (data.es_correcta) {
                 selectedBtn.classList.add('correct');
@@ -80,12 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 scoreElement.textContent = score;
             } else {
                 selectedBtn.classList.add('wrong');
-                feedbackText.textContent = `Incorrecto. La respuesta era: ${data.respuesta_correcta}`;
+                feedbackText.textContent = `Incorrecto. La respuesta era: ${respuestaCorrecta}`;
                 feedbackText.className = "feedback-text feedback-wrong";
                 
                 // Highlight the correct answer
                 allBtns.forEach(btn => {
-                    if (btn.textContent === data.respuesta_correcta) {
+                    if (btn.textContent === respuestaCorrecta) {
                         btn.classList.add('correct');
                     }
                 });
@@ -104,6 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackText.textContent = '';
         nextBtn.style.display = 'none';
         questionText.textContent = '';
+        if (knowledgeBadge) {
+            knowledgeBadge.textContent = '';
+        }
     }
 
     function showLoading(isLoading) {

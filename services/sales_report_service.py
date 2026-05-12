@@ -31,6 +31,7 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
 
         query = f"""
             SELECT 
+                CAST(V.FECHA AS DATE) as FECHA,
                 ISNULL(T.FORMATO, 'SIN FORMATO') as FORMATO,
                 ISNULL(P.GRUPO, 'SIN GRUPO') as GRUPO,
                 SUM(V.UNIDADES) as UNIDADES,
@@ -39,7 +40,8 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
             LEFT JOIN MAESTRA_ALMACENES T ON V.CODALMACEN = T.EQ_COD2
             LEFT JOIN PARAMETRIZACION P ON V.REFERENCIA = P.REFERENCIA
             WHERE {where_clause}
-            GROUP BY T.FORMATO, P.GRUPO
+            GROUP BY CAST(V.FECHA AS DATE), T.FORMATO, P.GRUPO
+            ORDER BY FECHA ASC
         """
         
         df = pd.read_sql(query, conn)
@@ -47,6 +49,7 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
         if df.empty:
             return {
                 "summary": {"unidades": 0, "valor": 0},
+                "by_day": [],
                 "by_format": [],
                 "by_group": []
             }
@@ -56,6 +59,14 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
             "unidades": int(df['UNIDADES'].sum()),
             "valor": float(df['TOTAL_VENTA'].sum())
         }
+
+        # Desglose por Día
+        df_day = df.groupby('FECHA').agg({
+            'UNIDADES': 'sum',
+            'TOTAL_VENTA': 'sum'
+        }).reset_index().sort_values('FECHA')
+        df_day['FECHA'] = df_day['FECHA'].astype(str)
+        by_day = df_day.to_dict(orient='records')
 
         # Desglose por Formato
         df_format = df.groupby('FORMATO').agg({
@@ -75,6 +86,7 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
 
         return {
             "summary": summary,
+            "by_day": by_day,
             "by_format": by_format,
             "by_group": by_group
         }

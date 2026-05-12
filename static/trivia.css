@@ -100,7 +100,13 @@
 }
 
 .feedback-wrong {
-    color: #fca5a5 !important;
+    color: #ef4444 !important;
+    background: #ffffff !important; /* Fondo blanco para resaltar */
+    padding: 15px 20px;
+    border-radius: 12px;
+    border-left: 5px solid #ef4444;
+    text-shadow: none !important;
+    font-weight: 600;
 }
 
 #next-btn {

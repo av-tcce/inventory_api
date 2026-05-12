@@ -15,8 +15,8 @@
 
   <!-- Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- FileSaver.js for reliable cross-browser downloads -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
@@ -639,6 +639,11 @@
             <i data-lucide="settings"></i>
             Ajustes y Configuraciones
           </button>
+          <button type="button" class="nav-item" data-target="module-agente"
+            onclick="toggleChatWidget()">
+            <i data-lucide="bot"></i>
+            Asistente IA (Beta)
+          </button>
         </div>
       </aside>
 
@@ -1019,6 +1024,54 @@
             </button>
 
             <div id="outlet-status" style="margin-top: 20px;"></div>
+
+            <!-- Sección de Fuentes de Datos -->
+            <div style="margin-top: 40px; padding-top: 24px; border-top: 1px dotted var(--border);">
+              <h4 style="font-size: 14px; color: var(--primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="database" style="width: 18px;"></i>
+                Diccionario de Datos y Fuentes
+              </h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                El reporte generado consolida información de múltiples fuentes. Aquí puedes consultar el origen de cada campo:
+              </p>
+              
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+                  <thead style="background: var(--surface);">
+                    <tr>
+                      <th style="padding: 10px; border-bottom: 1px solid var(--border); width: 30%;">Fuente de Datos</th>
+                      <th style="padding: 10px; border-bottom: 1px solid var(--border);">Campos Generados</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 10px; background: rgba(30, 58, 138, 0.02); font-weight: 600;">Servidor SQL .36 (Bodega)</td>
+                      <td style="padding: 10px;">Referencia, Talla, Color, Bodega, Existencia, Disponible, Compromiso (Bodega).</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 10px; background: rgba(30, 58, 138, 0.02); font-weight: 600;">Servidor SQL .1 (Inteligencia)</td>
+                      <td style="padding: 10px;">Grupo, Tipo de Prenda, Género, Personaje, Clasificación (MTA), Formato, Zona Ventas, Clima, Rank Venta, Ventas (Unidades).</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 10px; background: rgba(30, 58, 138, 0.02); font-weight: 600;">Servidor SQL .26 (Stocks)</td>
+                      <td style="padding: 10px;">Inv_Total (Stock Físico + Tránsito en Tienda).</td>
+                    </tr>
+                    <tr style="border-bottom: 10px solid transparent;">
+                      <td style="padding: 10px; background: rgba(30, 58, 138, 0.02); font-weight: 600;">Tu Archivo (TC Inventario)</td>
+                      <td style="padding: 10px;">ID Tienda, Sabana (Presupuesto), Requerido (Target), Prioridad.</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <td style="padding: 10px; background: rgba(16, 185, 129, 0.02); font-weight: 600;">Archivos Excel (Red BI)</td>
+                      <td style="padding: 10px;">Obs, Clasi Estelares, Matriz de Tallas (Mujer, Hombre, Niño, etc.), Factores de Ciclicidad.</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 10px; background: rgba(124, 58, 237, 0.02); font-weight: 600;">Cálculos del Algoritmo</td>
+                      <td style="padding: 10px; color: var(--primary); font-weight: 600;">Necesidad, Sabana Final (Resultado Final de Despacho).</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1302,8 +1355,42 @@
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-                <!-- Table by Format -->
+              <!-- Gráficos de Comportamiento -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px;">
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border); margin: 0;">
+                  <h4 style="font-size: 14px; margin-bottom: 16px; color: var(--primary);">Tendencia de Unidades por Día</h4>
+                  <div style="height: 250px;">
+                    <canvas id="chart-sales-units"></canvas>
+                  </div>
+                </div>
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border); margin: 0;">
+                  <h4 style="font-size: 14px; margin-bottom: 16px; color: var(--success);">Tendencia de Venta Total ($)</h4>
+                  <div style="height: 250px;">
+                    <canvas id="chart-sales-value"></canvas>
+                  </div>
+                </div>
+              </div>
+
+            <!-- Table by Day -->
+            <div style="margin-bottom: 32px;">
+              <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen General de Ventas por Día</h4>
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead style="background: var(--surface);">
+                    <tr>
+                      <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">Fecha</th>
+                      <th style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border);">Unidades</th>
+                      <th style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border);">Venta Total ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sales-table-day"></tbody>
+                  <tfoot id="sales-table-day-footer" style="background: var(--surface); font-weight: bold;"></tfoot>
+                </table>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <!-- Table by Format -->
                 <div>
                   <h4 style="margin-bottom: 12px; font-size: 14px;">Ventas por Formato</h4>
                   <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
@@ -1617,6 +1704,7 @@
             <div id="loading" class="loader" style="margin:40px auto; border-top-color:var(--primary); display:block;"></div>
             
             <div id="game-area" style="display: none; background:var(--surface); border:1px solid var(--border); padding:30px; border-radius:var(--radius-md); text-align:center;">
+                <div id="knowledge-area-badge" style="display: inline-block; padding: 6px 16px; background: #3b82f6; color: white; border-radius: 99px; font-size: 11px; font-weight: 800; margin-bottom: 16px; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.3); letter-spacing: 0.5px; position: relative; z-index: 2;">General</div>
                 <div id="question-text" style="font-size:20px; font-weight:600; margin-bottom:24px; color:var(--text-main);">Cargando pregunta...</div>
                 <div id="options-container" class="options-grid" style="display:grid; gap:12px; grid-template-columns:1fr;"></div>
                 <div id="feedback" style="margin-top:20px; font-weight:600; min-height:24px;"></div>
@@ -2094,6 +2182,14 @@
           titleTxt = "Panel de Reportes";
           descTxt = "Visualización y análisis avanzado de datos de inventario y ventas.";
           break;
+        case 'module-trivia':
+          titleTxt = "Trivia Master";
+          descTxt = "Pon a prueba tus conocimientos sobre la lógica y procesos del sistema.";
+          break;
+        case 'module-ajustes':
+          titleTxt = "Configuraciones";
+          descTxt = "Ajustes del sistema y parámetros de los algoritmos.";
+          break;
         default:
           titleTxt = "Configuraciones";
           descTxt = "Ajustes del sistema y parámetros de los algoritmos.";
@@ -2203,6 +2299,9 @@
     }
 
     /* ── Análisis de Ventas Logic ── */
+    let salesChartUnits = null;
+    let salesChartValue = null;
+
     function inicializarModuloSales() {
       const start = document.getElementById('input-sales-inicio');
       const end = document.getElementById('input-sales-fin');
@@ -2257,11 +2356,24 @@
           document.getElementById('sales-total-valor').textContent = '$' + data.summary.valor.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
           // Render tables
-          const renderTable = (tbodyId, list, key) => {
+          const renderTable = (tbodyId, list, key, highlightMax = false) => {
             const tbody = document.getElementById(tbodyId);
             tbody.innerHTML = '';
+            
+            let maxVal = -1;
+            if (highlightMax) {
+              maxVal = Math.max(...list.map(item => item.TOTAL_VENTA));
+            }
+
             list.forEach(row => {
               const tr = document.createElement('tr');
+              const isMax = highlightMax && row.TOTAL_VENTA === maxVal;
+              
+              if (isMax) {
+                tr.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'; // Light green
+                tr.style.color = '#065f46'; // Dark green text
+              }
+
               tr.innerHTML = `
                 <td style="padding: 10px; border-bottom: 1px solid var(--border); font-weight: 500;">${row[key]}</td>
                 <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right;">${row.UNIDADES.toLocaleString()}</td>
@@ -2271,8 +2383,101 @@
             });
           };
 
-          renderTable('sales-table-format', data.by_format, 'FORMATO');
+          // Table by Day with Total Footer
+          const tbodyDay = document.getElementById('sales-table-day');
+          const tfootDay = document.getElementById('sales-table-day-footer');
+          tbodyDay.innerHTML = '';
+          
+          let totalUnds = 0;
+          let totalValor = 0;
+
+          data.by_day.forEach(row => {
+            totalUnds += row.UNIDADES;
+            totalValor += row.TOTAL_VENTA;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.FECHA}</td>
+              <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right;">${row.UNIDADES.toLocaleString()}</td>
+              <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align: right; font-weight: 600;">$${row.TOTAL_VENTA.toLocaleString()}</td>
+            `;
+            tbodyDay.appendChild(tr);
+          });
+
+          tfootDay.innerHTML = `
+            <tr>
+              <td style="padding: 10px; text-align: left;">TOTAL</td>
+              <td style="padding: 10px; text-align: right;">${totalUnds.toLocaleString()}</td>
+              <td style="padding: 10px; text-align: right;">$${totalValor.toLocaleString()}</td>
+            </tr>
+          `;
+
+          renderTable('sales-table-format', data.by_format, 'FORMATO', true);
           renderTable('sales-table-group', data.by_group, 'GRUPO');
+
+          // Render Charts
+          const labels = data.by_day.map(item => item.FECHA);
+          const unitsData = data.by_day.map(item => item.UNIDADES);
+          const valueData = data.by_day.map(item => item.TOTAL_VENTA);
+
+          if (salesChartUnits) salesChartUnits.destroy();
+          if (salesChartValue) salesChartValue.destroy();
+
+          const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          };
+
+          salesChartUnits = new Chart(document.getElementById('chart-sales-units'), {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Unidades',
+                data: unitsData,
+                borderColor: '#1e3a8a',
+                backgroundColor: 'rgba(30, 58, 138, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#1e3a8a'
+              }]
+            },
+            options: commonOptions
+          });
+
+          salesChartValue = new Chart(document.getElementById('chart-sales-value'), {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Venta ($)',
+                data: valueData,
+                borderColor: '#0f766e',
+                backgroundColor: 'rgba(15, 118, 110, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#0f766e'
+              }]
+            },
+            options: {
+              ...commonOptions,
+              scales: {
+                ...commonOptions.scales,
+                y: {
+                  ...commonOptions.scales.y,
+                  ticks: {
+                    callback: (value) => '$' + value.toLocaleString()
+                  }
+                }
+              }
+            }
+          });
         }
       } catch (err) {
         status.innerHTML = `<div class="status-msg error"><i data-lucide="x-circle"></i> Error: ${err.message}</div>`;
@@ -2653,7 +2858,139 @@
     }
   </script>
 
-<script src="/static/trivia.js"></script>
-</body>
+<script src="/static/trivia.js?v=2"></script>
 
+<!-- Floating AI Assistant Widget -->
+<div id="ai-chat-widget" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: none; flex-direction: column; width: 400px; height: 600px; background: #0f172a; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);">
+    <div style="padding: 15px 20px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; justify-content: space-between; align-items: center; color: white;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="bot" style="width: 20px;"></i>
+            <span style="font-weight: 700; font-size: 14px;">Asistente Inteligente</span>
+        </div>
+        <button onclick="toggleChatWidget()" style="background: none; border: none; color: white; cursor: pointer; padding: 5px;">
+            <i data-lucide="x" style="width: 20px;"></i>
+        </button>
+    </div>
+    
+    <div id="widget-chat-container" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #0f172a;">
+        <div class="widget-msg-bot">
+            ¡Hola! Soy tu asistente. ¿En qué puedo ayudarte con el sistema hoy?
+        </div>
+    </div>
+
+    <div id="widget-typing" style="display: none; padding: 10px 20px; gap: 4px;">
+        <div class="dot-typing"></div><div class="dot-typing"></div><div class="dot-typing"></div>
+    </div>
+
+    <div style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); background: #0f172a; display: flex; gap: 10px;">
+        <input type="text" id="widget-input" placeholder="Pregunta algo..." style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 12px; color: white; font-size: 13px; outline: none;">
+        <button id="widget-send-btn" style="background: #3b82f6; border: none; width: 40px; height: 40px; border-radius: 10px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="send" style="width: 18px;"></i>
+        </button>
+    </div>
+</div>
+
+<style>
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(30px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .dot-typing {
+        width: 5px; height: 5px; background: #94a3b8; border-radius: 50%;
+        animation: bounce-widget 1.4s infinite ease-in-out;
+    }
+    .dot-typing:nth-child(2) { animation-delay: 0.2s; }
+    .dot-typing:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce-widget {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+    .widget-msg-user {
+        align-self: flex-end; background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white; padding: 12px 16px; border-radius: 18px; border-bottom-right-radius: 4px;
+        font-size: 13px; max-width: 85%; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        line-height: 1.5;
+    }
+    .widget-msg-bot {
+        align-self: flex-start; background: #1e293b;
+        color: #f1f5f9; padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.1); font-size: 13px; max-width: 85%;
+        line-height: 1.5; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+</style>
+
+<!-- Scripts para el Widget -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    function toggleChatWidget() {
+        const widget = document.getElementById('ai-chat-widget');
+        const isVisible = widget.style.display === 'flex';
+        widget.style.display = isVisible ? 'none' : 'flex';
+        if (!isVisible) {
+            document.getElementById('widget-input').focus();
+            lucide.createIcons();
+        }
+    }
+
+    const widgetChatContainer = document.getElementById('widget-chat-container');
+    const widgetInput = document.getElementById('widget-input');
+    const widgetSendBtn = document.getElementById('widget-send-btn');
+    const widgetTyping = document.getElementById('widget-typing');
+
+    function appendWidgetMessage(role, text) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = role === 'user' ? 'widget-msg-user' : 'widget-msg-bot';
+        
+        if (role === 'bot') {
+            msgDiv.innerHTML = marked.parse(text);
+        } else {
+            msgDiv.textContent = text;
+        }
+        
+        widgetChatContainer.appendChild(msgDiv);
+        widgetChatContainer.scrollTop = widgetChatContainer.scrollHeight;
+    }
+
+    async function sendWidgetMessage() {
+        const text = widgetInput.value.trim();
+        if (!text) return;
+
+        widgetInput.value = '';
+        appendWidgetMessage('user', text);
+        
+        widgetTyping.style.display = 'flex';
+        widgetChatContainer.scrollTop = widgetChatContainer.scrollHeight;
+        widgetSendBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/agent/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mensaje: text })
+            });
+
+            const data = await response.json();
+            widgetTyping.style.display = 'none';
+            
+            if (response.ok && data.response) {
+                appendWidgetMessage('bot', data.response);
+            } else {
+                const errorDetail = data.detail;
+                const errorStr = typeof errorDetail === 'object' ? JSON.stringify(errorDetail) : errorDetail;
+                appendWidgetMessage('bot', `⚠️ **Error del Sistema:** ${errorStr || 'Error desconocido'}`);
+            }
+        } catch (error) {
+            widgetTyping.style.display = 'none';
+            appendWidgetMessage('bot', '❌ **Error de Conexión:** No se pudo contactar con el servidor.');
+        } finally {
+            widgetSendBtn.disabled = false;
+        }
+    }
+
+    widgetSendBtn.addEventListener('click', sendWidgetMessage);
+    widgetInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendWidgetMessage();
+    });
+</script>
+</body>
 </html>

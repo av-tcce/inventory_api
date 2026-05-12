@@ -28,6 +28,9 @@ class Config:
     # Archivo Excel para el módulo Trivia
     TRIVIA_EXCEL_PATH = os.getenv("TRIVIA_EXCEL_PATH", r"C:\Users\Ander\Downloads\BD PREGUNTAS.xlsx")
 
+    # API Key de Gemini para el agente inteligente
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
     @classmethod
     def get_connection_string(cls, server="default"):
         if server == "bodega":

@@ -141,21 +141,43 @@ def generate_sabana_outlet(tc_content: bytes):
     df = df[df['AplicaGenero'] == 1]
 
     df_requerido = pd.read_excel(tc_file, sheet_name='Requerido', header=7, usecols=['EQ_COD2','GENERO','TIPO_DE_PRENDA','TALLA','Requerido','PRIORIDAD'])
-    df = pd.merge(df, df_requerido, left_on=['ID','GENERO','TIPO_DE_PRENDA','Talla'], right_on=['EQ_COD2','GENERO','TIPO_DE_PRENDA','TALLA'], how='left')
+    
+    # Normalización de claves para asegurar el cruce
+    for col in ['GENERO', 'TIPO_DE_PRENDA']:
+        df[col] = df[col].astype(str).str.strip().str.upper()
+        df_requerido[col] = df_requerido[col].astype(str).str.strip().str.upper()
+    
+    df['Talla_Norm'] = df['Talla'].astype(str).str.strip().str.upper()
+    df_requerido['Talla_Norm'] = df_requerido['TALLA'].astype(str).str.strip().str.upper()
+    
+    df = pd.merge(df, df_requerido, left_on=['ID','GENERO','TIPO_DE_PRENDA','Talla_Norm'], right_on=['EQ_COD2','GENERO','TIPO_DE_PRENDA','Talla_Norm'], how='left')
+    df.drop(['EQ_COD2', 'TALLA'], axis=1, inplace=True, errors='ignore')
     df = df.sort_values(by=['ORDEN','PRIORIDAD'], ascending=[True, False])
 
     # 5. Merges de Inventario Tienda, Ventas y Compromisos
-    df = pd.merge(df, df_ventas, left_on=['ID','Referencia','Talla','Color'], right_on=['CODALMACEN','REFERENCIA','TALLA','COLOR'], how='left')
+    # Normalización para los cruces de ventas e inventario
+    for df_tmp in [df_ventas, df_inv, df_COMP]:
+        for col in df_tmp.columns:
+            if col in ['CODALMACEN', 'REFERENCIA', 'TALLA', 'COLOR', 'REFPROVEEDOR', 'ID']:
+                df_tmp[col] = df_tmp[col].astype(str).str.strip().str.upper()
+
+    df['Ref_Norm'] = df['Referencia'].astype(str).str.strip().str.upper()
+    df['Color_Norm'] = df['Color'].astype(str).str.strip().str.upper()
+    # Talla_Norm ya fue creada arriba
+
+    df = pd.merge(df, df_ventas, left_on=['ID','Ref_Norm','Talla_Norm','Color_Norm'], right_on=['CODALMACEN','REFERENCIA','TALLA','COLOR'], how='left')
+    df.drop(['CODALMACEN','REFERENCIA','TALLA','COLOR'], axis=1, inplace=True, errors='ignore')
     df['UNIDADES'] = df['UNIDADES'].fillna(0).astype(int)
     
-    df_inv['CODALMACEN'] = "CO" + df_inv['CODALMACEN']
-    df = pd.merge(df, df_inv, left_on=['ID','Referencia','Talla','Color'], right_on=['CODALMACEN','REFPROVEEDOR','TALLA','COLOR'], how='left')
+    df_inv['CODALMACEN_FULL'] = "CO" + df_inv['CODALMACEN'].astype(str)
+    df = pd.merge(df, df_inv, left_on=['ID','Ref_Norm','Talla_Norm','Color_Norm'], right_on=['CODALMACEN_FULL','REFPROVEEDOR','TALLA','COLOR'], how='left')
+    df.drop(['CODALMACEN','CODALMACEN_FULL','REFPROVEEDOR','TALLA','COLOR'], axis=1, inplace=True, errors='ignore')
     df['INV_TOTAL'] = df['INV_TOTAL'].fillna(0).astype(int)
     
-    df = pd.merge(df, df_COMP, left_on=['ID','Referencia','Talla','Color'], right_on=['ID','REFERENCIA','TALLA','COLOR'], how='left')
+    df = pd.merge(df, df_COMP, left_on=['ID','Ref_Norm','Talla_Norm','Color_Norm'], right_on=['ID','REFERENCIA','TALLA','COLOR'], how='left')
     df['COMPROMISO'] = df['COMPROMISO'].fillna(0).astype(int)
     
-    df.drop(['REFERENCIA','TALLA','COLOR','CODALMACEN','REFPROVEEDOR'], axis=1, inplace=True, errors='ignore')
+    df.drop(['REFERENCIA','TALLA','COLOR','Ref_Norm','Color_Norm','Talla_Norm'], axis=1, inplace=True, errors='ignore')
     
     # Columna de Auditoría
     df['Ya_Tenia_Stock'] = np.where(df['INV_TOTAL'] > 0, 'SI', 'NO')

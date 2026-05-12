@@ -157,7 +157,12 @@
         }
 
         .feedback-wrong {
-            color: #fca5a5;
+            color: #ef4444;
+            background: #ffffff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            border-left: 5px solid #ef4444;
+            font-weight: 600;
         }
 
         .loader {
@@ -175,6 +180,20 @@
             100% { transform: rotate(360deg); }
         }
 
+        .knowledge-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
     </style>
 </head>
 <body>
@@ -190,6 +209,7 @@
         <div id="loading" class="loader"></div>
 
         <div id="game-area" style="display: none;">
+            <div id="knowledge-area-badge" class="knowledge-badge">General</div>
             <div id="question-text">Cargando pregunta...</div>
             <div class="options-grid" id="options-container">
                 <!-- Buttons will be injected here -->
