@@ -8,3 +8,5 @@ pyodbc>=5.0.0
 python-dotenv>=1.0.0
 python-calamine>=0.1.0
 xlsxwriter>=3.1.0
+pyxlsb>=1.0.11
+google-genai>=2.4.0

@@ -54,6 +54,25 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
                 "by_group": []
             }
 
+        # Query para Top Referencias (sin desglose por día para ahorrar filas)
+        query_top = f"""
+            SELECT TOP 100
+                V.REFERENCIA,
+                MAX(P.DESCRIPCION) as DESCRIPCION,
+                ISNULL(T.FORMATO, 'SIN FORMATO') as FORMATO,
+                ISNULL(P.GRUPO, 'SIN GRUPO') as GRUPO,
+                SUM(V.UNIDADES) as UNIDADES,
+                SUM(V.VALOR) as TOTAL_VENTA
+            FROM VentasColombia V
+            LEFT JOIN MAESTRA_ALMACENES T ON V.CODALMACEN = T.EQ_COD2
+            LEFT JOIN PARAMETRIZACION P ON V.REFERENCIA = P.REFERENCIA
+            WHERE {where_clause}
+            GROUP BY V.REFERENCIA, T.FORMATO, P.GRUPO
+            ORDER BY TOTAL_VENTA DESC
+        """
+        
+        df_top = pd.read_sql(query_top, conn)
+
         # Resumen General
         summary = {
             "unidades": int(df['UNIDADES'].sum()),
@@ -84,11 +103,15 @@ def get_sales_analytics(fecha_inicio: str, fecha_fin: str, formatos: list = None
         
         by_group = df_group.to_dict(orient='records')
 
+        # Top Referencias
+        top_refs = df_top.head(20).to_dict(orient='records')
+
         return {
             "summary": summary,
             "by_day": by_day,
             "by_format": by_format,
-            "by_group": by_group
+            "by_group": by_group,
+            "top_references": top_refs
         }
 
     except Exception as e:

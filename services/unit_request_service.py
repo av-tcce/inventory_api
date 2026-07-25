@@ -82,6 +82,10 @@ def generate_unit_request(
     # 2. Cargar Excels
     df2 = pd.read_excel(io.BytesIO(solicitud_content), sheet_name='DETALLE', header=0, dtype={'CDCDGO': str, 'CDTLLA': str})
     
+    # Asegurarse de que existe la columna MUEBLE (si no existe, crearla con valor por defecto)
+    if 'MUEBLE' not in df2.columns:
+        df2['MUEBLE'] = '-'
+    
     # Matriz de segmentación y Cargue (Rutas Estáticas)
     try:
         df4 = pd.read_excel(ruta_MATRIZ, sheet_name='Matriz', header=0)

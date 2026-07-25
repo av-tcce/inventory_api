@@ -2,14 +2,15 @@
 
 #game-area {
     /* Fondo azul vibrante pedido por el usuario */
-    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 20px !important;
-    padding: 40px !important;
-    box-shadow: 0 20px 40px -10px rgba(30, 58, 138, 0.4) !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 20px 40px -10px rgba(30, 58, 138, 0.4);
+    color: #ffffff;
     position: relative;
     overflow: hidden;
+    width: 100%;
 }
 
 /* Efecto de brillo en el fondo */
@@ -25,11 +26,11 @@
 }
 
 #question-text {
-    color: #ffffff !important;
-    font-size: 22px !important;
-    font-weight: 700 !important;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 700;
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    margin-bottom: 30px !important;
+    margin-bottom: 30px;
 }
 
 .options-grid {
@@ -75,53 +76,53 @@
 }
 
 .option-btn.correct {
-    background: rgba(16, 185, 129, 0.9) !important;
-    border-color: #34d399 !important;
-    color: white !important;
+    background: rgba(16, 185, 129, 0.9);
+    border-color: #34d399;
+    color: white;
     font-weight: 700;
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
 }
 
 .option-btn.wrong {
-    background: rgba(239, 68, 68, 0.9) !important;
-    border-color: #f87171 !important;
-    color: white !important;
+    background: rgba(239, 68, 68, 0.9);
+    border-color: #f87171;
+    color: white;
     font-weight: 700;
 }
 
 #feedback {
     font-size: 18px;
-    margin-top: 25px !important;
+    margin-top: 25px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .feedback-correct {
-    color: #34d399 !important;
+    color: #34d399;
 }
 
 .feedback-wrong {
-    color: #ef4444 !important;
-    background: #ffffff !important; /* Fondo blanco para resaltar */
+    color: #ef4444;
+    background: #ffffff; /* Fondo blanco para resaltar */
     padding: 15px 20px;
     border-radius: 12px;
     border-left: 5px solid #ef4444;
-    text-shadow: none !important;
+    text-shadow: none;
     font-weight: 600;
 }
 
 #next-btn {
-    background: linear-gradient(135deg, #10b981, #059669) !important;
-    border: none !important;
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
-    font-size: 16px !important;
-    padding: 16px !important;
-    margin-top: 30px !important;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    font-size: 16px;
+    padding: 16px;
+    margin-top: 30px;
 }
 
 #next-btn:hover {
-    background: linear-gradient(135deg, #34d399, #10b981) !important;
+    background: linear-gradient(135deg, #34d399, #10b981);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
 }
 
 #score {

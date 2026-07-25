@@ -28,6 +28,7 @@ def distribuir_inventario(
 
     # ── Índices O(1) ─────────────────────────────────────────────────────────
     porcentajes_dict = {p.tienda: p.porcentaje / 100.0 for p in request.porcentaje_distribucion}
+    reglas_aceptacion = {p.tienda: p.tipo_aceptado.upper() for p in request.porcentaje_distribucion}
     todas_las_tiendas = list(porcentajes_dict.keys())
 
     inv_actual_dict = {(d.tienda, d.sku): d.unidades_actuales for d in request.inventario_destino}
@@ -52,9 +53,28 @@ def distribuir_inventario(
         talla             = origen.talla
         color             = origen.color
         unidades_pendientes = origen.unidades
+        tipo_prod         = origen.tipo_producto.upper()
         excepciones_sku   = excepciones_por_sku.get(sku, [])
         tiendas_elegibles = set(todas_las_tiendas)
         asignaciones_sku: List[AsignacionItem] = []
+
+        # PASO 1.5 – Filtrar por Tipo de Producto aceptado
+        tiendas_invalidas = []
+        for t in list(tiendas_elegibles):
+            aceptado = reglas_aceptacion.get(t, "AMBOS")
+            if aceptado != "AMBOS" and aceptado != tipo_prod:
+                tiendas_elegibles.remove(t)
+                tiendas_invalidas.append(t)
+                auditoria.append(AuditoriaItem(
+                    sku=sku, tienda=t,
+                    genero=genero, talla=talla, color=color,
+                    decision="TIPO_RECHAZADO",
+                    ventas=ventas_dict.get((t, sku), 0),
+                    capacidad_max=0,
+                    stock_actual=inv_actual_dict.get((t, sku), 0),
+                    unidades_asignadas=0,
+                    razon=f"Tienda solo recibe {aceptado} y el producto es {tipo_prod}."
+                ))
 
         # PASO 2 – Excluir tiendas con NO_ASIGNAR
         for exc in excepciones_sku:

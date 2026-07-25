@@ -6,6 +6,37 @@ import warnings
 from datetime import datetime
 from config import settings
 
+
+def _normalize_text_series(series: pd.Series) -> pd.Series:
+    """Normaliza una serie de texto para cruces: string, sin espacios y en mayúsculas."""
+    return series.astype(str).str.strip().str.upper()
+
+
+def load_tc_inventory_sheets(tc_content: bytes):
+    """Carga y valida las hojas Cargue y Requerido del Excel TC INVENTARIO."""
+    tc_file = io.BytesIO(tc_content)
+    try:
+        cargue_df = pd.read_excel(tc_file, sheet_name='Cargue', header=8)
+        requerido_df = pd.read_excel(tc_file, sheet_name='Requerido', header=7)
+    except ValueError as exc:
+        raise ValueError(f"El archivo TC INVENTARIO no tiene las hojas esperadas: {exc}") from exc
+
+    required_cargue_columns = {'EQ_COD2', 'SABANA'}
+    required_requerido_columns = {'EQ_COD2', 'GENERO', 'TIPO_DE_PRENDA', 'TALLA', 'Requerido', 'PRIORIDAD'}
+
+    missing_cargue = required_cargue_columns - set(cargue_df.columns)
+    missing_requerido = required_requerido_columns - set(requerido_df.columns)
+
+    if missing_cargue or missing_requerido:
+        details = []
+        if missing_cargue:
+            details.append(f"hoja Cargue: faltan columnas {sorted(missing_cargue)}")
+        if missing_requerido:
+            details.append(f"hoja Requerido: faltan columnas {sorted(missing_requerido)}")
+        raise ValueError("Estructura inválida del archivo TC INVENTARIO: " + "; ".join(details))
+
+    return cargue_df, requerido_df
+
 warnings.filterwarnings("ignore")
 
 # Rutas de red estáticas
@@ -119,9 +150,11 @@ def generate_sabana_outlet(tc_content: bytes):
     df_sabana = df_sabana[~df_sabana['OBS'].isin(exclusiones)]
 
     # 4. Cargar TC INVENTARIO (desde el contenido subido)
-    tc_file = io.BytesIO(tc_content)
-    df_necesidad_tienda = pd.read_excel(tc_file, sheet_name='Cargue', header=8, usecols=['EQ_COD2','SABANA'])
+    cargue_df, requerido_df = load_tc_inventory_sheets(tc_content)
+    df_necesidad_tienda = cargue_df[['EQ_COD2', 'SABANA']].copy()
     df_necesidad_tienda = df_necesidad_tienda[df_necesidad_tienda['SABANA'].notna()]
+    if df_necesidad_tienda.empty:
+        raise ValueError("La hoja Cargue no tiene valores válidos en la columna SABANA.")
 
     df = pd.merge(df_sabana, df_necesidad_tienda, how='cross')
     df.rename(columns={'EQ_COD2': 'ID'}, inplace=True)
@@ -140,19 +173,23 @@ def generate_sabana_outlet(tc_content: bytes):
     df['AplicaGenero'] = df.apply(get_genero, axis=1)
     df = df[df['AplicaGenero'] == 1]
 
-    df_requerido = pd.read_excel(tc_file, sheet_name='Requerido', header=7, usecols=['EQ_COD2','GENERO','TIPO_DE_PRENDA','TALLA','Requerido','PRIORIDAD'])
+    df_requerido = requerido_df[['EQ_COD2', 'GENERO', 'TIPO_DE_PRENDA', 'TALLA', 'Requerido', 'PRIORIDAD']].copy()
     
     # Normalización de claves para asegurar el cruce
     for col in ['GENERO', 'TIPO_DE_PRENDA']:
-        df[col] = df[col].astype(str).str.strip().str.upper()
-        df_requerido[col] = df_requerido[col].astype(str).str.strip().str.upper()
-    
-    df['Talla_Norm'] = df['Talla'].astype(str).str.strip().str.upper()
-    df_requerido['Talla_Norm'] = df_requerido['TALLA'].astype(str).str.strip().str.upper()
-    
-    df = pd.merge(df, df_requerido, left_on=['ID','GENERO','TIPO_DE_PRENDA','Talla_Norm'], right_on=['EQ_COD2','GENERO','TIPO_DE_PRENDA','Talla_Norm'], how='left')
+        df[col] = _normalize_text_series(df[col])
+        df_requerido[col] = _normalize_text_series(df_requerido[col])
+
+    df['Talla_Norm'] = _normalize_text_series(df['Talla'])
+    df_requerido['Talla_Norm'] = _normalize_text_series(df_requerido['TALLA'])
+
+    df = pd.merge(df, df_requerido, left_on=['ID', 'GENERO', 'TIPO_DE_PRENDA', 'Talla_Norm'], right_on=['EQ_COD2', 'GENERO', 'TIPO_DE_PRENDA', 'Talla_Norm'], how='left')
     df.drop(['EQ_COD2', 'TALLA'], axis=1, inplace=True, errors='ignore')
-    df = df.sort_values(by=['ORDEN','PRIORIDAD'], ascending=[True, False])
+    if df['Requerido'].isna().all():
+        raise ValueError(
+            "No se encontraron requerimientos válidos en la hoja Requerido del TC INVENTARIO. Revise que EQ_COD2, GENERO, TIPO_DE_PRENDA y TALLA coincidan con los datos del archivo."
+        )
+    df = df.sort_values(by=['ORDEN', 'PRIORIDAD'], ascending=[True, False])
 
     # 5. Merges de Inventario Tienda, Ventas y Compromisos
     # Normalización para los cruces de ventas e inventario

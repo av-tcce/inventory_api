@@ -1,15 +1,27 @@
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Query
+from typing import List
 from fastapi.responses import Response, StreamingResponse, FileResponse
-from models.schemas import RequestDistribucion, ResponseDistribucion
+from models.schemas import (
+    RequestDistribucion, ResponseDistribucion, CurveUpdate, 
+    ConsultaCurvaUpdate, ResumenDestino, ResumenDistribucion
+)
 from services.algorithm import distribuir_inventario
 from services.sabana_service import generate_sabana_mto
 from services.unit_request_service import generate_unit_request
+from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
 from services.agotados_service import get_necesidad_data, generate_agotados_excel
+from services.agotados_compare_service import agotados_compare_service
 from services.clasificacion_service import get_clasificacion_data, generate_clasificacion_excel
+from services.referencias_matriculadas_service import get_referencias_matriculadas, get_referencias_matriculadas_export, get_referencias_matriculadas_summary
 from services.sales_report_service import get_sales_analytics
+from services.curve_service import curve_service
+from services.consulta_curvas_service import consulta_curvas_service
+from services.almacenes_service import almacenes_service
+from services.distribution_helper import distribution_helper
+from services.traslados_service import traslados_service
 import pandas as pd
 import io
 import os
@@ -30,60 +42,47 @@ def download_template():
     Descarga un archivo Excel de plantilla con las 5 hojas requeridas y datos de ejemplo.
     Úsalo como guía para construir tu propio archivo y subirlo al endpoint /distribute/excel.
     """
-    # ── Hoja 1: Origen ─────────────────────────────────────────────────────────
-    # La tienda que cierra / cede el inventario para redistribuir.
-    df_origen = pd.DataFrame([
-        {"Tienda": "TIENDA_ORIGEN", "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades": 50},
-        {"Tienda": "TIENDA_ORIGEN", "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades": 30},
+    # ── Hoja 1: Inventario ─────────────────────────────────────────────────────
+    # Listado completo de inventario con las columnas exactas solicitadas.
+    df_inventario = pd.DataFrame([
+        {
+            "ID": "101", "ALMACEN": "TIENDA_ORIGEN", "FORMATO": "MIC", "ZONA": "CENTRO", 
+            "FORMATO 2": "MIC", "REFERENCIA": "SKU001", "DESCRIPCION": "CAMISETA EJEMPLO",
+            "TALLA": "M", "COLOR": "NEGRO", "STOCK": 50, "TRANSITO": 0, "STOCKTOTAL": 50,
+            "MES": "5", "AÑO": "2026", "GRUPO": "TEXTIL", "SUBLINEA EXITO": "",
+            "GENERO": "HOMBRE", "PERSONAJE": "DISNEY", "SILUETA": "BASICA",
+            "TIPO PRENDA": "CAMISETA", "PRENDA": "SUPERIOR", "ROPERO": "HOMBRE",
+            "CLASIFICACION_PROCESADA": "Línea", "LINEA_OUTLET": "LINEA"
+        },
+        {
+            "ID": "202", "ALMACEN": "MALL_SUR", "FORMATO": "OUTLET MIC", "ZONA": "SUR", 
+            "FORMATO 2": "OUTLET", "REFERENCIA": "SKU001", "DESCRIPCION": "CAMISETA EJEMPLO",
+            "TALLA": "M", "COLOR": "NEGRO", "STOCK": 2, "TRANSITO": 0, "STOCKTOTAL": 2,
+            "MES": "5", "AÑO": "2026", "GRUPO": "TEXTIL", "SUBLINEA EXITO": "",
+            "GENERO": "HOMBRE", "PERSONAJE": "DISNEY", "SILUETA": "BASICA",
+            "TIPO PRENDA": "CAMISETA", "PRENDA": "SUPERIOR", "ROPERO": "HOMBRE",
+            "CLASIFICACION_PROCESADA": "Outlet", "LINEA_OUTLET": "OUTLET"
+        },
     ])
 
-    # ── Hoja 2: Destino ────────────────────────────────────────────────────────
-    # Stock que cada tienda destino YA tiene en piso (para evitar sobrestock).
-    df_destino = pd.DataFrame([
-        {"Tienda": "MALL_SUR",   "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Actuales": 2},
-        {"Tienda": "MALL_SUR",   "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Actuales": 0},
-        {"Tienda": "MALL_NORTE", "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Actuales": 0},
-        {"Tienda": "MALL_NORTE", "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Actuales": 4},
-        {"Tienda": "CENTRO",     "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Actuales": 1},
-        {"Tienda": "CENTRO",     "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Actuales": 0},
+    # ── Hoja 2: Parametros ─────────────────────────────────────────────────────
+    # Configuración de roles y reglas por tienda.
+    df_parametros = pd.DataFrame([
+        {"Tienda": "101", "Rol": "ORIGEN",  "Porcentaje": 0,    "Tipo_Aceptado": "Ambos"},
+        {"Tienda": "202", "Rol": "DESTINO", "Porcentaje": 60.0, "Tipo_Aceptado": "Linea"},
+        {"Tienda": "303", "Rol": "DESTINO", "Porcentaje": 40.0, "Tipo_Aceptado": "Outlet"},
     ])
 
-    # ── Hoja 3: Ventas ─────────────────────────────────────────────────────────
-    # Ventas históricas por (Tienda, SKU). Misma clave que Destino.
-    # Si una tienda no vendió un SKU, ponla con Unidades Vendidas = 0.
-    df_ventas = pd.DataFrame([
-        {"Tienda": "MALL_SUR",   "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Vendidas": 10},
-        {"Tienda": "MALL_SUR",   "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Vendidas": 8},
-        {"Tienda": "MALL_NORTE", "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Vendidas": 15},
-        {"Tienda": "MALL_NORTE", "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Vendidas": 12},
-        {"Tienda": "CENTRO",     "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Unidades Vendidas": 0},
-        {"Tienda": "CENTRO",     "SKU": "SKU002", "Genero": "MUJER",  "Talla": "38", "Color": "ROJO",  "Unidades Vendidas": 5},
-    ])
-
-    # ── Hoja 4: Porcentajes ────────────────────────────────────────────────────
-    # Peso base de distribución por tienda. La suma de Porcentaje DEBE ser 100.
-    df_porcentajes = pd.DataFrame([
-        {"Tienda": "MALL_SUR",   "Nombre": "Mall del Sur",   "Porcentaje": 30.0},
-        {"Tienda": "MALL_NORTE", "Nombre": "Mall del Norte", "Porcentaje": 50.0},
-        {"Tienda": "CENTRO",     "Nombre": "Tienda Centro",  "Porcentaje": 20.0},
-    ])
-
-    # ── Hoja 5: Excepciones ────────────────────────────────────────────────────
-    # ASIGNAR_FIJO → enviar exactamente N unidades de ese SKU a esa tienda.
-    # NO_ASIGNAR   → no enviar nada de ese SKU a esa tienda.
-    # Si no tienes excepciones, deja la hoja con solo los encabezados.
+    # ── Hoja 3: Excepciones ────────────────────────────────────────────────────
     df_excepciones = pd.DataFrame([
-        {"Tienda": "MALL_SUR", "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Tipo": "ASIGNAR_FIJO", "Cantidad": 5,  "Motivo": "Pedido especial cliente VIP"},
-        {"Tienda": "CENTRO",   "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Tipo": "NO_ASIGNAR",   "Cantidad": "", "Motivo": "Local en remodelación"},
+        {"Tienda": "202", "SKU": "SKU001", "Genero": "HOMBRE", "Talla": "M",  "Color": "NEGRO", "Tipo": "ASIGNAR_FIJO", "Cantidad": 5,  "Motivo": "Pedido especial"},
     ])
 
     # ── Escribir todo en un buffer de memoria ───────────────────────────────────
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_origen.to_excel(writer,      sheet_name="Origen",      index=False)
-        df_destino.to_excel(writer,     sheet_name="Destino",     index=False)
-        df_ventas.to_excel(writer,      sheet_name="Ventas",      index=False)
-        df_porcentajes.to_excel(writer, sheet_name="Porcentajes", index=False)
+        df_inventario.to_excel(writer,  sheet_name="Inventario",  index=False)
+        df_parametros.to_excel(writer,  sheet_name="Parametros",  index=False)
         df_excepciones.to_excel(writer, sheet_name="Excepciones", index=False)
 
     # Preparamos el buffer para lectura
@@ -117,166 +116,157 @@ def distribute_inventory(request: RequestDistribucion):
 @router.post("/distribute/excel", response_model=ResponseDistribucion, tags=["Distribucion Excel"])
 async def distribute_inventory_excel(
     factor_cobertura: float = Form(2.5, description="Factor multiplicador de cobertura (ej: 2.5)"),
-    file: UploadFile = File(..., description="Documento Excel con las 5 tablas necesarias")
+    periodo: str = Form("ultimos_30_dias"),
+    formatos: str = Form("[]"),
+    grupos: str = Form("[]"),
+    file: UploadFile = File(..., description="Documento Excel con Inventario y Parametros")
 ):
     """
     Recibe un archivo excel y extrae la información de sus hojas.
     Utiliza el helper _parse_excel_request para asegurar consistencia.
     """
+    import json
     if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
         raise HTTPException(status_code=400, detail="Debes subir un archivo Excel (.xlsx o .xls)")
         
     contents = await file.read()
     
     try:
-        request = _parse_excel_request(contents, factor_cobertura)
+        formatos_list = json.loads(formatos)
+        grupos_list = json.loads(grupos)
+        request, _ = await _parse_excel_request(contents, factor_cobertura, periodo, formatos_list, grupos_list)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=f"Error parseando Excel: {str(e)}")
 
     try:
-        asignaciones, _ = distribuir_inventario(request)
-        return ResponseDistribucion(asignaciones=asignaciones)
+        asignaciones, auditoria = distribuir_inventario(request)
+        
+        # Calcular Resumen para el UI
+        total_origen = sum(o.unidades for o in request.inventario_origen)
+        total_dist = sum(a.unidades_asignadas for a in asignaciones)
+        
+        resumen_destinos = []
+        # Agrupar por tienda
+        dest_map = {}
+        for a in asignaciones:
+            dest_map[a.tienda] = dest_map.get(a.tienda, 0) + a.unidades_asignadas
+        
+        for t, uds in dest_map.items():
+            pct = (uds / total_dist * 100) if total_dist > 0 else 0
+            resumen_destinos.append(ResumenDestino(tienda=t, unidades=uds, porcentaje=round(pct, 2)))
+        
+        # Encontrar ID origen
+        id_origen = request.inventario_origen[0].tienda if request.inventario_origen else "N/A"
+        
+        resumen = ResumenDistribucion(
+            tienda_origen=id_origen,
+            total_origen=total_origen,
+            total_distribuido=total_dist,
+            destinos=resumen_destinos
+        )
+        
+        return ResponseDistribucion(asignaciones=asignaciones, resumen=resumen)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno en algoritmo: {str(e)}")
 
 
-def _parse_excel_request(contents: bytes, factor_cobertura: float) -> RequestDistribucion:
+async def _parse_excel_request(contents: bytes, factor_cobertura: float, periodo: str = "ultimos_30_dias", formatos: list = None, grupos: list = None) -> tuple[RequestDistribucion, list]:
     """
-    Helper reutilizable: lee el Excel en memoria y devuelve un RequestDistribucion validado.
-    Limpia los valores nulos (NaN) para evitar errores de validación en Pydantic.
+    Helper: lee el Excel (Inventario + Parametros) y devuelve RequestDistribucion + Sugerencias.
     """
     xls = pd.read_excel(io.BytesIO(contents), sheet_name=None, dtype=str)
     
-    # Limpiar filas completamente vacías
     for sheet in xls:
         xls[sheet] = xls[sheet].dropna(how='all')
 
     def get_sheet(names):
         for name in names:
             if name in xls:
-                # Retornamos una copia para no afectar el dict original si se requiere re-uso
                 return xls[name].copy()
-        raise ValueError(f"No se encontró la hoja '{names[0]}'. Hojas disponibles: {list(xls.keys())}")
+        return pd.DataFrame()
 
-    # Cargar hojas con nombres posibles (robusto a variaciones)
-    df_origen      = get_sheet(["Origen", "Inventario_Origen", "inventario origen"])
-    df_destino     = get_sheet(["Destino", "Inventario_Destino", "inventario destino"])
-    df_ventas      = get_sheet(["Ventas", "Ventas_Destino", "ventas destino"])
-    df_porcentajes = get_sheet(["Porcentajes", "porcentaje ventas", "porcentaje de ventas"])
+    df_inv = get_sheet(["Inventario", "Inventario_Completo", "inventario"])
+    df_par = get_sheet(["Parametros", "Parametros_Distribucion", "parametros"])
+    df_exc = get_sheet(["Excepciones", "excepciones"])
+
+    if df_inv.empty or df_par.empty:
+        raise ValueError("El archivo Excel debe contener las hojas 'Inventario' y 'Parametros'.")
+
+    # 1. Segmentación
+    inv_origen, inv_destino, porcentajes, id_origen = distribution_helper.segment_inventory(df_inv, df_par)
+
+    # 2. Filtrado por Formato/Grupo (si se especifica)
+    # Aquí podríamos filtrar inv_destino o porcentajes según los filtros globales
+    # Pero usualmente los filtros globales se aplican al proceso.
     
-    df_excepciones = pd.DataFrame()
-    try:
-        df_excepciones = get_sheet(["Excepciones", "tabla de excepciones", "excepciones"])
-    except ValueError:
-        pass
+    # 3. Ventas SQL
+    skus = list(set([o.sku for o in inv_origen]))
+    tiendas = list(set([p.tienda for p in porcentajes]))
+    ventas_destino = distribution_helper.fetch_sales_from_sql(skus, tiendas, periodo)
 
-    def parse_col_numeric(df, col_name, as_float=False):
-        """Busca columnas numéricas por nombre y las convierte, manejando nulos."""
-        for col in df.columns:
-            if col_name.lower() in col.lower():
-                if as_float:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
-                else:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+    # 4. Sugerencias por Zona
+    sugerencias = distribution_helper.get_zone_suggestions(id_origen, tiendas)
 
-    # 1. Convertir columnas numéricas primero
-    parse_col_numeric(df_origen,      "unidades")
-    parse_col_numeric(df_destino,     "unidades")
-    parse_col_numeric(df_ventas,      "unidades")
-    parse_col_numeric(df_porcentajes, "porcentaje", as_float=True)
-    if not df_excepciones.empty:
-        parse_col_numeric(df_excepciones, "cantidad") or parse_col_numeric(df_excepciones, "unidades")
-
-    def sanitize_cols(df):
-        """Normaliza los nombres de las columnas para que coincidan con los modelos de Pydantic."""
-        mapper = {}
-        for c in df.columns:
-            c_low = str(c).lower().strip()
-            if "tienda" in c_low or "codigo" in c_low:
-                mapper[c] = "tienda"
-            elif "sku" in c_low:
-                mapper[c] = "sku"
-            elif c_low in ("genero", "género", "gender", "sexo"):
-                mapper[c] = "genero"
-            elif c_low in ("talla", "talle", "size", "medida"):
-                mapper[c] = "talla"
-            elif c_low in ("color", "colour", "tono"):
-                mapper[c] = "color"
-            elif "actual" in c_low:
-                mapper[c] = "unidades_actuales"
-            elif "vendida" in c_low:
-                mapper[c] = "unidades_vendidas"
-            elif "cantidad" in c_low:
-                mapper[c] = "unidades"
-            elif "unidades" in c_low and "unidades_actuales" not in mapper.values() and "unidades_vendidas" not in mapper.values():
-                mapper[c] = "unidades"
-            elif c_low in ("%",) or "porcentaje" in c_low:
-                mapper[c] = "porcentaje"
-            elif "nombre" in c_low:
-                mapper[c] = "nombre"
-            elif "tipo" in c_low:
-                mapper[c] = "tipo"
-            elif "motivo" in c_low:
-                mapper[c] = "motivo"
-        return df.rename(columns=mapper)
-
-    # 2. Sanitizar nombres de columnas
-    df_origen      = sanitize_cols(df_origen)
-    df_destino     = sanitize_cols(df_destino)
-    df_ventas      = sanitize_cols(df_ventas)
-    df_porcentajes = sanitize_cols(df_porcentajes)
-
-    # 3. CRUCIAL: Reemplazar cualquier NaN restante con string vacío
-    # Esto soluciona los errores de validación de Pydantic para Genero, Talla, Color, etc.
-    df_origen      = df_origen.fillna("")
-    df_destino     = df_destino.fillna("")
-    df_ventas      = df_ventas.fillna("")
-    df_porcentajes = df_porcentajes.fillna("")
-
+    # 5. Excepciones
     excepciones_list = []
-    if not df_excepciones.empty:
-        df_excepciones = sanitize_cols(df_excepciones)
-        df_excepciones = df_excepciones.fillna("")
-        if "tipo" not in df_excepciones.columns:
-            df_excepciones["tipo"] = "ASIGNAR_FIJO"
-        # Asegurar que si tipo es ASIGNAR_FIJO la columna 'unidades' exista (mapeada de cantidad)
-        if "unidades" not in df_excepciones.columns and "cantidad" in df_excepciones.columns:
-             df_excepciones = df_excepciones.rename(columns={"cantidad": "unidades"})
-        
-        excepciones_list = df_excepciones.to_dict(orient="records")
+    if not df_exc.empty:
+        # Sanitizar y mapear excepciones (mantenemos lógica anterior simplificada)
+        df_exc = df_exc.fillna("")
+        excepciones_list = df_exc.to_dict(orient="records")
+        # Asegurar campos requeridos para el modelo
+        for exc in excepciones_list:
+            if 'unidades' not in exc and 'cantidad' in exc:
+                exc['unidades'] = int(pd.to_numeric(exc['cantidad'], errors='coerce') or 0)
+            elif 'unidades' in exc:
+                exc['unidades'] = int(pd.to_numeric(exc['unidades'], errors='coerce') or 0)
+            
+            if 'tipo' not in exc: exc['tipo'] = "ASIGNAR_FIJO"
+            exc['sku'] = str(exc.get('SKU', exc.get('sku', ''))).strip()
+            exc['tienda'] = str(exc.get('TIENDA', exc.get('tienda', ''))).strip()
 
     return RequestDistribucion(**{
-        "inventario_origen":       df_origen.to_dict(orient="records"),
-        "inventario_destino":      df_destino.to_dict(orient="records"),
-        "ventas_destino":          df_ventas.to_dict(orient="records"),
-        "porcentaje_distribucion": df_porcentajes.to_dict(orient="records"),
+        "inventario_origen":       inv_origen,
+        "inventario_destino":      inv_destino,
+        "ventas_destino":          ventas_destino,
+        "porcentaje_distribucion": porcentajes,
         "excepciones":             excepciones_list,
         "factor_cobertura":        factor_cobertura,
-    })
+    }), sugerencias
 
 
 @router.post("/distribute/excel/resultado", tags=["Distribucion Excel"])
 async def distribute_excel_resultado(
     factor_cobertura: float = Form(2.5, description="Factor multiplicador de cobertura (ej: 2.5)"),
-    file: UploadFile = File(..., description="Archivo Excel con las 5 hojas requeridas")
+    periodo: str = Form("ultimos_30_dias"),
+    formatos: str = Form("[]"),
+    grupos: str = Form("[]"),
+    file: UploadFile = File(..., description="Archivo Excel con Inventario y Parametros")
 ):
     """
-    Procesa el Excel y devuelve un Excel de resultado con dos hojas:
+    Procesa el Excel y devuelve un Excel de resultado con tres hojas:
     - 'Distribucion': asignaciones por tienda y SKU.
-    - 'Explicacion': detalle del razonamiento del algoritmo por cada fila.
+    - 'Explicacion': detalle del razonamiento del algoritmo.
+    - 'Sugerencias': tiendas en la misma zona no incluidas.
     """
+    import json
     if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
         raise HTTPException(status_code=400, detail="El archivo debe ser .xlsx o .xls")
 
     contents = await file.read()
 
     try:
-        request = _parse_excel_request(contents, factor_cobertura)
+        formatos_list = json.loads(formatos)
+        grupos_list = json.loads(grupos)
+        request, sugerencias = await _parse_excel_request(contents, factor_cobertura, periodo, formatos_list, grupos_list)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         raise HTTPException(status_code=400, detail=f"Error leyendo Excel: {str(e)}")
 
     try:
@@ -287,7 +277,8 @@ async def distribute_excel_resultado(
     # ── Hoja 1: Distribución ────────────────────────────────────────────────
     df_dist = pd.DataFrame([
         {
-            "Tienda":             a.tienda,
+            "Tienda Origen":     request.inventario_origen[0].tienda if request.inventario_origen else "",
+            "Tienda Destino":    a.tienda,
             "SKU":               a.sku,
             "Genero":            a.genero,
             "Talla":             a.talla,
@@ -316,11 +307,15 @@ async def distribute_excel_resultado(
         for a in auditoria
     ])
 
+    # ── Hoja 3: Sugerencias ───────────────────────────────────────────────
+    df_sug = pd.DataFrame(sugerencias)
+
     # ── Generar Excel en memoria ───────────────────────────────────────────────
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_dist.to_excel(writer, sheet_name="Distribucion", index=False)
         df_exp.to_excel(writer,  sheet_name="Explicacion",  index=False)
+        df_sug.to_excel(writer,  sheet_name="Sugerencias",  index=False)
 
     # Preparamos el buffer para lectura
     output.seek(0)
@@ -410,6 +405,52 @@ async def generate_unit_request_endpoint(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error generando Solicitud de Unidades: {str(e)}")
+
+@router.get("/unit-request/query", tags=["Solicitud de Unidades"])
+def query_unit_request(cdcdgo: str = Query(..., description="Referencia CDCDGO a buscar")):
+    """Consulta la tabla tblSolicitudUnidades por referencia CDCDGO."""
+    try:
+        rows = consultar_solicitud_unidades(cdcdgo)
+        return {"cdcdgo": cdcdgo, "rows": rows}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error en la consulta: {str(e)}")
+
+@router.get("/unit-request/query/export", tags=["Solicitud de Unidades"])
+def export_unit_request_query(cdcdgo: str = Query(..., description="Referencia CDCDGO a exportar")):
+    """Exporta los registros de tblSolicitudUnidades correspondientes a un CDCDGO."""
+    try:
+        df = get_solicitud_unidades_dataframe(cdcdgo)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name="Detalle", index=False)
+        output.seek(0)
+        filename = f"detalle_solicitud_unidades_{cdcdgo}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando detalle: {str(e)}")
+
+@router.get("/unit-request/summary", tags=["Reportes y Análisis"])
+def get_unit_request_summary(cdcdgo: str = Query(None, description="Referencia CDCDGO a consultar")):
+    """Retorna un resumen de unidades cargadas en tblSolicitudUnidades para una referencia específica."""
+    if not cdcdgo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar una referencia CDCDGO para consultar el resumen. Ejemplo: /unit-request/summary?cdcdgo=REF123"
+        )
+    try:
+        return resumen_solicitud_unidades_por_referencia(cdcdgo)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando resumen: {str(e)}")
 
 @router.post("/sabana-outlet/generate", tags=["Sabana Outlet"])
 async def generate_sabana_outlet_endpoint(
@@ -616,4 +657,322 @@ def get_sales_report(inicio: str, fin: str, formatos: str = None, grupos: str = 
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/curves", tags=["Curvas"])
+def get_curves():
+    """Retorna todos los datos de curvas y los filtros disponibles."""
+    try:
+        print(f"DEBUG: Iniciando consulta de curvas...")
+        data = curve_service.get_all_curves()
+        filters = curve_service.get_filters()
+        print(f"DEBUG: Consulta exitosa. {len(data)} registros encontrados.")
+        return {
+            "data": data,
+            "filters": filters
+        }
+    except Exception as e:
+        print(f"ERROR en /curves: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/curves/update", tags=["Curvas"])
+def update_curves(payload: CurveUpdate):
+    """Actualiza una curva específica en el archivo Excel."""
+    try:
+        success = curve_service.update_curve(payload.tipo_prenda, payload.genero, payload.data)
+        return {"success": success, "message": "Curva actualizada correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/consulta-curvas", tags=["Consulta de Curvas"])
+def get_consulta_curvas():
+    """Retorna los datos del Excel de curvas para consulta."""
+    try:
+        data = consulta_curvas_service.get_data()
+        filters = consulta_curvas_service.get_filters(data)
+        return {
+            "data": data,
+            "filters": filters
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/consulta-curvas/update", tags=["Consulta de Curvas"])
+def update_consulta_curva(payload: ConsultaCurvaUpdate):
+    """Actualiza los valores de una curva en el Excel."""
+    try:
+        success = consulta_curvas_service.update_curve(
+            payload.tipo_prenda, 
+            payload.genero, 
+            payload.talla, 
+            payload.data
+        )
+        return {"success": success, "message": "Registro actualizado correctamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/almacenes/filters", tags=["Maestra Almacenes"])
+def get_almacenes_filters():
+    """Retorna las opciones únicas para filtrar almacenes."""
+    try:
+        return almacenes_service.get_filter_options()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/almacenes/report", tags=["Maestra Almacenes"])
+def get_almacenes_report(
+    tiendas_ii: List[str] = Query(None),
+    formato: List[str] = Query(None),
+    zona: List[str] = Query(None),
+    estado: List[str] = Query(None),
+    ciudad: List[str] = Query(None),
+    zona_ventas: List[str] = Query(None),
+    pais: List[str] = Query(None),
+    genero: List[str] = Query(None)
+):
+    """Consulta la maestra de almacenes con filtros múltiples."""
+    try:
+        filters = {
+            "TIENDAS_II": tiendas_ii,
+            "FORMATO": formato,
+            "ZONA": zona,
+            "ESTADO": estado,
+            "CIUDAD": ciudad,
+            "ZONA_VENTAS": zona_ventas,
+            "PAIS": pais,
+            "GENERO": genero
+        }
+        df = almacenes_service.get_maestra_almacenes(filters)
+        return {
+            "total": len(df),
+            "data": df.to_dict(orient="records")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/almacenes/export", tags=["Maestra Almacenes"])
+def export_almacenes(
+    tiendas_ii: List[str] = Query(None),
+    formato: List[str] = Query(None),
+    zona: List[str] = Query(None),
+    estado: List[str] = Query(None),
+    ciudad: List[str] = Query(None),
+    zona_ventas: List[str] = Query(None),
+    pais: List[str] = Query(None),
+    genero: List[str] = Query(None)
+):
+    """Exporta la maestra de almacenes a Excel con filtros múltiples."""
+    try:
+        filters = {
+            "TIENDAS_II": tiendas_ii,
+            "FORMATO": formato,
+            "ZONA": zona,
+            "ESTADO": estado,
+            "CIUDAD": ciudad,
+            "ZONA_VENTAS": zona_ventas,
+            "PAIS": pais,
+            "GENERO": genero
+        }
+        df = almacenes_service.get_maestra_almacenes(filters)
+        output = almacenes_service.generate_excel(df)
+        
+        filename = f"Maestra_Almacenes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/traslados/opciones-destino", tags=["Traslados"])
+def get_traslados_opciones_destino():
+    """Devuelve los negocios, formatos y climas disponibles en la maestra de almacenes para filtrar traslados."""
+    try:
+        return traslados_service.get_opciones_destino()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo las opciones: {str(e)}")
+
+@router.post("/traslados/excel", tags=["Traslados"])
+async def suggest_traslados_from_excel(
+    file: UploadFile = File(..., description="Archivo Excel con columnas CODALMACEN, REFERENCIA, TALLA, COLOR, STOCK"),
+    top_n: int = Form(5, description="Número de tiendas cercanas sugeridas por item"),
+    origen_negocio: str = Form(None, description="Tipo de negocio de las tiendas origen. Vacío = todos"),
+    destino_negocio: str = Form(None, description="Tipo de negocio de las tiendas destino. Vacío = todos"),
+    formatos_destino: List[str] = Form(None, description="Formatos destino permitidos. Vacío = mismo formato que el origen"),
+    climas_destino: List[str] = Form(None, description="Climas destino permitidos. Vacío = mismo clima que el origen")
+):
+    """Recibe un Excel con stock de tienda origen y sugiere posibles traslados a tiendas cercanas."""
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="Debes subir un archivo Excel (.xlsx o .xls)")
+
+    try:
+        contents = await file.read()
+        results = traslados_service.build_suggestions(
+            contents,
+            top_n=top_n,
+            origen_negocio=(origen_negocio or None),
+            destino_negocio=(destino_negocio or None),
+            formatos_destino=(formatos_destino or None),
+            climas_destino=(climas_destino or None)
+        )
+        return results
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error procesando el Excel de traslados: {str(e)}")
+
+@router.post("/traslados/excel/export", tags=["Traslados"])
+async def export_traslados_from_excel(
+    file: UploadFile = File(..., description="Archivo Excel con columnas CODALMACEN, REFERENCIA, TALLA, COLOR, STOCK"),
+    top_n: int = Form(5, description="Número de tiendas cercanas sugeridas por item"),
+    origen_negocio: str = Form(None, description="Tipo de negocio de las tiendas origen. Vacío = todos"),
+    destino_negocio: str = Form(None, description="Tipo de negocio de las tiendas destino. Vacío = todos"),
+    formatos_destino: List[str] = Form(None, description="Formatos destino permitidos. Vacío = mismo formato que el origen"),
+    climas_destino: List[str] = Form(None, description="Climas destino permitidos. Vacío = mismo clima que el origen")
+):
+    """Genera un archivo Excel con las sugerencias de traslado."""
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="Debes subir un archivo Excel (.xlsx o .xls)")
+
+    try:
+        contents = await file.read()
+        results = traslados_service.build_suggestions(
+            contents,
+            top_n=top_n,
+            origen_negocio=(origen_negocio or None),
+            destino_negocio=(destino_negocio or None),
+            formatos_destino=(formatos_destino or None),
+            climas_destino=(climas_destino or None)
+        )
+        output = traslados_service.generate_excel(results)
+        filename = f"Traslados_Sugerencias_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generando el Excel de traslados: {str(e)}")
+
+@router.get("/referencias-matriculadas", tags=["Referencias Matriculadas"])
+def get_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None, pais: str = "Colombia"):
+    """
+    Devuelve un resumen de referencias matriculadas a partir de tblAgotados.
+    Filtra por país, mínimo mayor a cero, fecha opcional y tienda opcional.
+    """
+    try:
+        summary = get_referencias_matriculadas_summary(
+            fecha=fecha,
+            codigo_tienda=codigo_tienda,
+            pais=pais,
+        )
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/referencias-matriculadas/export", tags=["Referencias Matriculadas"])
+def export_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None, pais: str = "Colombia"):
+    """
+    Exporta el detalle completo de referencias matriculadas según los filtros seleccionados.
+    """
+    try:
+        detail = get_referencias_matriculadas_export(fecha=fecha, codigo_tienda=codigo_tienda, pais=pais)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para los filtros seleccionados.")
+
+        if isinstance(detail, dict):
+            detail = pd.DataFrame(detail)
+
+        if not hasattr(detail, "empty"):
+            raise HTTPException(status_code=500, detail="El detalle de exportación no es un DataFrame válido.")
+
+        if detail.empty:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para los filtros seleccionados.")
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            detail.to_excel(writer, sheet_name="Detalle", index=False)
+        output.seek(0)
+
+        display_date = fecha or datetime.now().strftime("%Y%m%d")
+        filename = f"Referencias_Matriculadas_{display_date}.xlsx"
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agotados/compare", tags=["Comparación de Agotados"])
+def get_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)):
+    """
+    Compara el comportamiento de los agotados entre dos fechas por formato y referencia.
+    """
+    import json
+    try:
+        formatos_list = json.loads(formatos) if formatos else None
+
+        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list)
+        res_agotadas = result["referencias_agotadas"]
+        res_general = result["resumen_general"]
+        res_agotadas_dict = res_agotadas.replace([float('inf'), float('-inf')], None).fillna("").to_dict(orient="records")
+        return {
+            "referencias_agotadas": res_agotadas_dict,
+            "resumen_general": res_general
+        }
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/agotados/compare/export", tags=["Comparación de Agotados"])
+def export_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)):
+    """
+    Genera y descarga el archivo Excel completo con la comparación de agotados.
+    """
+    import json
+    try:
+        formatos_list = json.loads(formatos) if formatos else None
+        
+        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list)
+        
+        if result["resumen_formatos"].empty and result["detalle_referencias"].empty:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para las fechas seleccionadas.")
+
+        output = agotados_compare_service.generate_comparison_excel(
+            result["resumen_formatos"],
+            result["detalle_referencias"],
+            fecha_1,
+            fecha_2
+        )
+        
+        filename = f"Comparacion_Agotados_{fecha_1}_vs_{fecha_2}.xlsx"
+        headers = {
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+        
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers=headers
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 

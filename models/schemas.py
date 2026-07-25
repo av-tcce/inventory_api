@@ -15,6 +15,7 @@ class InventarioOrigenItem(BaseModel):
     talla:   str = Field(default="",  description="Talla (ej: S, M, L, 38, 40…)")
     color:   str = Field(default="",  description="Color del artículo")
     unidades: int = Field(..., ge=0,  description="Unidades disponibles para distribuir")
+    tipo_producto: str = Field(default="Linea", description="Linea o Outlet")
 
 class InventarioDestinoItem(BaseModel):
     """Stock que cada tienda destino ya tiene antes de recibir mercancía."""
@@ -42,6 +43,8 @@ class PorcentajeDistribucionItem(BaseModel):
     tienda:     str   = Field(..., description="Código de la tienda")
     nombre:     Optional[str] = Field(default="", description="Nombre descriptivo (opcional)")
     porcentaje: float = Field(..., ge=0, le=100)
+    tipo_aceptado: str = Field(default="Ambos", description="Linea, Outlet o Ambos")
+    zona:       Optional[str] = Field(default="", description="Zona geográfica (informativo)")
 
 class ExcepcionItem(BaseModel):
     """
@@ -73,11 +76,6 @@ class RequestDistribucion(BaseModel):
 
     @model_validator(mode='after')
     def validate_business_rules(self) -> 'RequestDistribucion':
-        total_pct = sum(p.porcentaje for p in self.porcentaje_distribucion)
-        if not (99.9 <= total_pct <= 100.1):
-            raise ValueError(
-                f"La suma de porcentajes debe ser 100. Suma actual: {total_pct:.2f}"
-            )
         for exc in self.excepciones:
             if exc.tipo in ("ASIGNAR_FIJO", "MAXIMO") and exc.unidades is None:
                 raise ValueError(
@@ -98,5 +96,28 @@ class AsignacionItem(BaseModel):
     unidades_asignadas: int
     tipo_asignacion:    Literal["NORMAL", "FIJO", "REDISTRIBUIDO"]
 
+class ResumenDestino(BaseModel):
+    tienda: str
+    unidades: int
+    porcentaje: float
+
+class ResumenDistribucion(BaseModel):
+    tienda_origen: str
+    total_origen: int
+    total_distribuido: int
+    destinos: List[ResumenDestino]
+
 class ResponseDistribucion(BaseModel):
     asignaciones: List[AsignacionItem]
+    resumen: Optional[ResumenDistribucion] = None
+
+class CurveUpdate(BaseModel):
+    gender: str
+    type: str
+    data: dict
+
+class ConsultaCurvaUpdate(BaseModel):
+    tipo_prenda: str
+    genero: str
+    talla: str
+    data: dict
