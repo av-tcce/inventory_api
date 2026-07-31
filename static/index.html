@@ -885,6 +885,11 @@
               <i data-lucide="home"></i>
               Maestra Almacenes
             </button>
+            <button type="button" class="nav-item" data-target="module-inv-tiendas"
+              onclick="switchModule('module-inv-tiendas', this)">
+              <i data-lucide="warehouse"></i>
+              Inventario de Tiendas
+            </button>
           </div>
           <button type="button" class="nav-item" data-target="module-referencias-matriculadas"
             onclick="switchModule('module-referencias-matriculadas', this)">
@@ -1926,20 +1931,15 @@
             </div>
 
             <div class="settings-panel" style="margin-bottom: 24px;">
-              <div style="display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end;">
-                <div>
-                  <div class="setting-label">
-                    <h4>Resumen General</h4>
-                  </div>
-                  <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">
-                    Obtiene el total de unidades, tiendas y climas desde tblSolicitudUnidades.
-                  </p>
-                </div>
-                <button class="btn btn-primary" id="btn-consultar-solicitud-summary" onclick="consultarResumenSolicitud()" style="min-width: 180px; height: 44px;">
-                  <i data-lucide="search" style="width:18px"></i>
-                  Consultar Resumen
-                </button>
+              <div class="setting-label">
+                <h4>Referencias</h4>
+                <p>Una referencia (CDCDGO) por línea. Ejemplo: 1010</p>
               </div>
+              <textarea id="input-summary-referencias" class="input-field" rows="5" placeholder="Ejemplo:&#10;1010&#10;2020" style="width: 100%; font-family: monospace; resize: vertical; margin-bottom: 12px;"></textarea>
+              <button class="btn btn-primary" id="btn-consultar-solicitud-summary" onclick="consultarResumenSolicitud()" style="min-width: 180px; height: 44px;">
+                <i data-lucide="search" style="width:18px"></i>
+                Consultar Resumen
+              </button>
             </div>
 
             <div id="solicitud-summary-status" style="margin-top: 20px;"></div>
@@ -1960,6 +1960,22 @@
                 </div>
               </div>
 
+              <div style="margin-bottom: 24px;">
+                <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen por Referencia</h4>
+                <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 300px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead style="background: var(--surface); position: sticky; top: 0;">
+                      <tr>
+                        <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">CDCDGO</th>
+                        <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Unids</th>
+                        <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Registros</th>
+                      </tr>
+                    </thead>
+                    <tbody id="summary-table-reference"></tbody>
+                  </table>
+                </div>
+              </div>
+
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
                 <div>
                   <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen por Tienda</h4>
@@ -1967,6 +1983,7 @@
                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                       <thead style="background: var(--surface); position: sticky; top: 0;">
                         <tr>
+                          <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">CDCDGO</th>
                           <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Código</th>
                           <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Tienda</th>
                           <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Zona</th>
@@ -1996,17 +2013,137 @@
             </div>
 
             <div class="settings-panel" style="margin-top: 24px; margin-bottom: 24px;">
-              <div class="setting-label">
-                <h4>Consulta por Referencia</h4>
-                <p>Busca los registros en <strong>tblSolicitudUnidades</strong> usando el campo <strong>CDCDGO</strong> después del resumen.</p>
-              </div>
-              <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                <input id="input-cdcdgo" type="text" class="input-field" placeholder="Ingresa CDCDGO" style="flex:1; min-width:180px;">
-                <button class="btn btn-outline" id="btn-query-cdcdgo" onclick="consultarSolicitudUnidades()" style="min-width:160px;">Consultar</button>
+              <div style="display:flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                <div class="setting-label">
+                  <h4>Detalle</h4>
+                  <p>Registros de <strong>tblSolicitudUnidades</strong> para las referencias consultadas arriba.</p>
+                </div>
                 <button class="btn btn-secondary" id="btn-export-cdcdgo" onclick="exportSolicitudDetalle()" style="min-width:160px;">Exportar Detalle</button>
               </div>
               <div id="solicitud-query-status" style="margin-top: 14px;"></div>
               <div id="solicitud-query-result" style="margin-top: 16px; max-height: 350px; overflow: auto;"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="module-inv-tiendas" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--accent))">
+                <i data-lucide="warehouse"></i>
+              </div>
+              <div class="card-title">Inventario de Tiendas</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Inventario por tienda relacionado con Parametrización y Maestra de Almacenes.
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Consulta la tabla <strong>inv_tiendas</strong> cruzada con <strong>PARAMETRIZACION</strong> (por referencia) y <strong>MAESTRA_ALMACENES</strong> (por tienda) para una fecha de inventario específica.
+              </p>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 16px;">
+                <div class="setting-group">
+                  <div class="setting-label">
+                    <h4>Fecha de Inventario</h4>
+                    <p>Fecha del snapshot a consultar (obligatorio).</p>
+                  </div>
+                  <input type="date" id="input-fecha-inv-tiendas" class="input-field" style="width: 100%;">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                  <div class="setting-label">
+                    <h4>Tiendas (opcional)</h4>
+                    <p>WarehouseCode, una por línea. Vacío = todas.</p>
+                  </div>
+                  <textarea id="input-inv-tiendas-warehouses" class="input-field" rows="4" placeholder="Ejemplo:&#10;1010&#10;2020" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
+                </div>
+                <div>
+                  <div class="setting-label">
+                    <h4>Referencias (opcional)</h4>
+                    <p>Una por línea. Vacío = todas.</p>
+                  </div>
+                  <textarea id="input-inv-tiendas-referencias" class="input-field" rows="4" placeholder="Ejemplo:&#10;93123846&#10;93123847" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
+                </div>
+              </div>
+
+              <div style="display:flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" id="btn-consultar-inv-tiendas" onclick="consultarInventarioTiendas()" style="min-width: 180px; height: 44px;">
+                  <i data-lucide="search" style="width:18px"></i>
+                  Consultar Resumen
+                </button>
+                <button class="btn btn-secondary" id="btn-export-inv-tiendas" onclick="exportarInventarioTiendas()" style="min-width: 200px; height: 44px;">
+                  <i data-lucide="download" style="width:18px"></i>
+                  Exportar Sábana Completa
+                </button>
+              </div>
+            </div>
+
+            <div id="inv-tiendas-status" style="margin-top: 20px;"></div>
+
+            <div id="inv-tiendas-results" style="display: none; margin-top: 32px;">
+              <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px;">
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border);">
+                  <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Existencia Total</p>
+                  <h3 id="inv-tiendas-total-existencia" style="font-size: 24px; color: var(--primary);">0</h3>
+                </div>
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border);">
+                  <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Stock Total</p>
+                  <h3 id="inv-tiendas-total-stock" style="font-size: 24px; color: var(--success);">0</h3>
+                </div>
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border);">
+                  <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Tiendas</p>
+                  <h3 id="inv-tiendas-total-tiendas" style="font-size: 24px; color: var(--secondary);">0</h3>
+                </div>
+                <div class="card" style="padding: 20px; background: white; border: 1px solid var(--border);">
+                  <p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Referencias</p>
+                  <h3 id="inv-tiendas-total-referencias" style="font-size: 24px; color: var(--accent);">0</h3>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div>
+                  <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen por Formato</h4>
+                  <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 400px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                      <thead style="background: var(--surface); position: sticky; top: 0;">
+                        <tr>
+                          <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Formato</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Existencia</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Stock Total</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Tiendas</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Registros</th>
+                        </tr>
+                      </thead>
+                      <tbody id="inv-tiendas-table-formato"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div>
+                  <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen por Grupo</h4>
+                  <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 400px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                      <thead style="background: var(--surface); position: sticky; top: 0;">
+                        <tr>
+                          <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Grupo</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Existencia</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Stock Total</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Referencias</th>
+                          <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Registros</th>
+                        </tr>
+                      </thead>
+                      <tbody id="inv-tiendas-table-grupo"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -3471,27 +3608,12 @@
       }
     }
 
-    async function consultarSolicitudUnidades() {
-      const btn = document.getElementById('btn-query-cdcdgo');
-      const input = document.getElementById('input-cdcdgo');
+    let ultimasReferenciasSolicitud = [];
+
+    async function cargarDetalleSolicitud(referencias) {
       const statusDiv = document.getElementById('solicitud-query-status');
       const resultDiv = document.getElementById('solicitud-query-result');
-      const cdcdgo = input.value.trim();
 
-      if (!cdcdgo) {
-        statusDiv.innerHTML = `
-          <div class="status-msg error">
-            <i data-lucide="x-circle" style="width:24px"></i>
-            <div>
-              <strong>Debe ingresar un CDCDGO válido.</strong>
-            </div>
-          </div>
-        `;
-        resultDiv.innerHTML = '';
-        return;
-      }
-
-      btn.disabled = true;
       statusDiv.innerHTML = `
         <div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);">
           <i data-lucide="loader" class="spin"></i>
@@ -3502,7 +3624,10 @@
       lucide.createIcons();
 
       try {
-        const response = await fetch(`/unit-request/query?cdcdgo=${encodeURIComponent(cdcdgo)}`);
+        const params = new URLSearchParams();
+        referencias.forEach(ref => params.append('cdcdgo', ref));
+
+        const response = await fetch(`/unit-request/query?${params.toString()}`);
         if (!response.ok) {
           const message = await readErrorMessage(response);
           throw new Error(message || 'Error en la consulta.');
@@ -3515,7 +3640,7 @@
             <div class="status-msg warning">
               <i data-lucide="alert-triangle" style="width:24px"></i>
               <div>
-                <strong>No se encontraron registros para CDCDGO:</strong> ${cdcdgo}
+                <strong>No se encontraron registros para las referencias:</strong> ${referencias.join(', ')}
               </div>
             </div>
           `;
@@ -3554,32 +3679,32 @@
           <div class="status-msg error">
             <i data-lucide="x-circle" style="width:24px"></i>
             <div>
-              <strong>Error al consultar:</strong> ${err.message}
+              <strong>Error al consultar el detalle:</strong> ${err.message}
             </div>
           </div>
         `;
         resultDiv.innerHTML = '';
         lucide.createIcons();
-      } finally {
-        btn.disabled = false;
       }
     }
 
     function exportSolicitudDetalle() {
-      const cdcdgo = document.getElementById('input-cdcdgo').value.trim();
-      if (!cdcdgo) {
-        const statusDiv = document.getElementById('solicitud-query-status');
+      const statusDiv = document.getElementById('solicitud-query-status');
+      if (ultimasReferenciasSolicitud.length === 0) {
         statusDiv.innerHTML = `
           <div class="status-msg error">
             <i data-lucide="x-circle" style="width:24px"></i>
             <div>
-              <strong>Debe ingresar un CDCDGO válido para exportar.</strong>
+              <strong>Primero consulta el resumen con al menos una referencia.</strong>
             </div>
           </div>
         `;
+        lucide.createIcons();
         return;
       }
-      window.location.href = `/unit-request/query/export?cdcdgo=${encodeURIComponent(cdcdgo)}`;
+      const params = new URLSearchParams();
+      ultimasReferenciasSolicitud.forEach(ref => params.append('cdcdgo', ref));
+      window.location.href = `/unit-request/query/export?${params.toString()}`;
     }
 
     // Toggle Submenu function
@@ -3648,6 +3773,10 @@
           titleTxt = "Resumen Solicitud de Unidades";
           descTxt = "Resumen de unidades cargadas en tblSolicitudUnidades por zona y por tienda.";
           inicializarModuloSolicitudSummary();
+          break;
+        case 'module-inv-tiendas':
+          titleTxt = "Inventario de Tiendas";
+          descTxt = "Consulta y descarga del inventario de tiendas (inv_tiendas) relacionado con Parametrización y Maestra de Almacenes.";
           break;
         case 'module-agotados':
           titleTxt = "Buscador de Agotados";
@@ -4181,12 +4310,9 @@
       }
     }
 
-    let resumenSolicitudSummaryLoaded = false;
     function inicializarModuloSolicitudSummary() {
-      if (!resumenSolicitudSummaryLoaded) {
-        resumenSolicitudSummaryLoaded = true;
-        consultarResumenSolicitud();
-      }
+      // No se ejecuta ninguna consulta automática: se espera a que el usuario
+      // ingrese referencias y presione "Consultar Resumen".
     }
 
     async function consultarVentas() {
@@ -4402,6 +4528,26 @@
       const btn = document.getElementById('btn-consultar-solicitud-summary');
       const status = document.getElementById('solicitud-summary-status');
       const results = document.getElementById('solicitud-summary-results');
+      const textarea = document.getElementById('input-summary-referencias');
+
+      const referencias = textarea.value
+        .split('\n')
+        .map(v => v.trim())
+        .filter(v => v.length > 0);
+
+      if (referencias.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div>
+              <strong>Debe ingresar al menos una referencia (CDCDGO).</strong>
+            </div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
 
       btn.disabled = true;
       status.innerHTML = '<div class="status-msg" style="background: rgba(124, 58, 237, 0.05); color: var(--accent);"><i data-lucide="loader" class="spin"></i> Consultando resumen...</div>';
@@ -4409,7 +4555,10 @@
       lucide.createIcons();
 
       try {
-        const response = await fetch('/unit-request/summary');
+        const params = new URLSearchParams();
+        referencias.forEach(ref => params.append('cdcdgo', ref));
+
+        const response = await fetch(`/unit-request/summary?${params.toString()}`);
         if (!response.ok) {
           const message = await readErrorMessage(response);
           throw new Error(message || 'Error al obtener el resumen.');
@@ -4420,11 +4569,24 @@
         document.getElementById('summary-total-tiendas').textContent = data.summary.total_tiendas.toLocaleString();
         document.getElementById('summary-total-zonas').textContent = data.summary.total_zonas.toLocaleString();
 
+        const tbodyReference = document.getElementById('summary-table-reference');
+        tbodyReference.innerHTML = '';
+        data.by_reference.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.CDCDGO}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_UNIDADES.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.REGISTROS.toLocaleString()}</td>
+          `;
+          tbodyReference.appendChild(tr);
+        });
+
         const tbodyStore = document.getElementById('summary-table-store');
         tbodyStore.innerHTML = '';
         data.by_store.forEach(row => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.CDCDGO}</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.CODIGO}</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.TIENDA}</td>
             <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.ZONA}</td>
@@ -4448,6 +4610,9 @@
         results.style.display = 'block';
         status.innerHTML = '';
         lucide.createIcons();
+
+        ultimasReferenciasSolicitud = referencias;
+        await cargarDetalleSolicitud(referencias);
       } catch (err) {
         status.innerHTML = `
           <div class="status-msg error">
@@ -4460,6 +4625,130 @@
       } finally {
         btn.disabled = false;
       }
+    }
+
+    /* ── Inventario de Tiendas Logic ── */
+    function leerFiltrosInvTiendas() {
+      const fecha = document.getElementById('input-fecha-inv-tiendas').value;
+      const warehouses = document.getElementById('input-inv-tiendas-warehouses').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+      const referencias = document.getElementById('input-inv-tiendas-referencias').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+      return { fecha, warehouses, referencias };
+    }
+
+    function buildParamsInvTiendas({ fecha, warehouses, referencias }) {
+      const params = new URLSearchParams();
+      params.append('fecha', fecha);
+      warehouses.forEach(w => params.append('warehouse_code', w));
+      referencias.forEach(r => params.append('referencia', r));
+      return params;
+    }
+
+    async function consultarInventarioTiendas() {
+      const btn = document.getElementById('btn-consultar-inv-tiendas');
+      const status = document.getElementById('inv-tiendas-status');
+      const results = document.getElementById('inv-tiendas-results');
+      const filtros = leerFiltrosInvTiendas();
+
+      if (!filtros.fecha) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div>
+              <strong>Debe seleccionar una fecha de inventario.</strong>
+            </div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Consultando inventario...</div>';
+      results.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const params = buildParamsInvTiendas(filtros);
+        const response = await fetch(`/inv-tiendas/summary?${params.toString()}`);
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al obtener el inventario.');
+        }
+
+        const data = await response.json();
+        document.getElementById('inv-tiendas-total-existencia').textContent = data.summary.total_existencia.toLocaleString();
+        document.getElementById('inv-tiendas-total-stock').textContent = data.summary.total_stock.toLocaleString();
+        document.getElementById('inv-tiendas-total-tiendas').textContent = data.summary.total_tiendas.toLocaleString();
+        document.getElementById('inv-tiendas-total-referencias').textContent = data.summary.total_referencias.toLocaleString();
+
+        const tbody = document.getElementById('inv-tiendas-table-formato');
+        tbody.innerHTML = '';
+        data.by_format.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.FORMATO}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_EXISTENCIA.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_STOCK.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_TIENDAS.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.REGISTROS.toLocaleString()}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const tbodyGrupo = document.getElementById('inv-tiendas-table-grupo');
+        tbodyGrupo.innerHTML = '';
+        data.by_group.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">${row.GRUPO}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_EXISTENCIA.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_STOCK.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.TOTAL_REFERENCIAS.toLocaleString()}</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border); text-align:right;">${row.REGISTROS.toLocaleString()}</td>
+          `;
+          tbodyGrupo.appendChild(tr);
+        });
+
+        results.style.display = 'block';
+        status.innerHTML = '';
+        lucide.createIcons();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div>
+              <strong>Error al cargar el inventario:</strong> ${err.message}
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function exportarInventarioTiendas() {
+      const status = document.getElementById('inv-tiendas-status');
+      const filtros = leerFiltrosInvTiendas();
+
+      if (!filtros.fecha) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div>
+              <strong>Debe seleccionar una fecha de inventario para exportar.</strong>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const params = buildParamsInvTiendas(filtros);
+      window.location.href = `/inv-tiendas/export?${params.toString()}`;
     }
 
     /* ── Consulta de Curvas Logic ── */

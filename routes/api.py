@@ -9,6 +9,7 @@ from services.algorithm import distribuir_inventario
 from services.sabana_service import generate_sabana_mto
 from services.unit_request_service import generate_unit_request
 from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia
+from services.inv_tiendas_service import resumen_inventario_tiendas, exportar_inventario_tiendas
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
@@ -407,8 +408,8 @@ async def generate_unit_request_endpoint(
         raise HTTPException(status_code=500, detail=f"Error generando Solicitud de Unidades: {str(e)}")
 
 @router.get("/unit-request/query", tags=["Solicitud de Unidades"])
-def query_unit_request(cdcdgo: str = Query(..., description="Referencia CDCDGO a buscar")):
-    """Consulta la tabla tblSolicitudUnidades por referencia CDCDGO."""
+def query_unit_request(cdcdgo: List[str] = Query(..., description="Una o varias referencias CDCDGO a buscar")):
+    """Consulta la tabla tblSolicitudUnidades por una o varias referencias CDCDGO."""
     try:
         rows = consultar_solicitud_unidades(cdcdgo)
         return {"cdcdgo": cdcdgo, "rows": rows}
@@ -418,15 +419,15 @@ def query_unit_request(cdcdgo: str = Query(..., description="Referencia CDCDGO a
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error en la consulta: {str(e)}")
 
 @router.get("/unit-request/query/export", tags=["Solicitud de Unidades"])
-def export_unit_request_query(cdcdgo: str = Query(..., description="Referencia CDCDGO a exportar")):
-    """Exporta los registros de tblSolicitudUnidades correspondientes a un CDCDGO."""
+def export_unit_request_query(cdcdgo: List[str] = Query(..., description="Una o varias referencias CDCDGO a exportar")):
+    """Exporta los registros de tblSolicitudUnidades correspondientes a una o varias referencias CDCDGO."""
     try:
         df = get_solicitud_unidades_dataframe(cdcdgo)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, sheet_name="Detalle", index=False)
         output.seek(0)
-        filename = f"detalle_solicitud_unidades_{cdcdgo}.xlsx"
+        filename = f"detalle_solicitud_unidades_{cdcdgo[0]}.xlsx" if len(cdcdgo) == 1 else "detalle_solicitud_unidades.xlsx"
         return StreamingResponse(
             output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -438,12 +439,12 @@ def export_unit_request_query(cdcdgo: str = Query(..., description="Referencia C
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando detalle: {str(e)}")
 
 @router.get("/unit-request/summary", tags=["Reportes y Análisis"])
-def get_unit_request_summary(cdcdgo: str = Query(None, description="Referencia CDCDGO a consultar")):
-    """Retorna un resumen de unidades cargadas en tblSolicitudUnidades para una referencia específica."""
+def get_unit_request_summary(cdcdgo: List[str] = Query(None, description="Una o varias referencias CDCDGO a consultar")):
+    """Retorna un resumen de unidades cargadas en tblSolicitudUnidades para una o varias referencias."""
     if not cdcdgo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debe proporcionar una referencia CDCDGO para consultar el resumen. Ejemplo: /unit-request/summary?cdcdgo=REF123"
+            detail="Debe proporcionar al menos una referencia CDCDGO para consultar el resumen. Ejemplo: /unit-request/summary?cdcdgo=REF123&cdcdgo=REF456"
         )
     try:
         return resumen_solicitud_unidades_por_referencia(cdcdgo)
@@ -451,6 +452,44 @@ def get_unit_request_summary(cdcdgo: str = Query(None, description="Referencia C
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando resumen: {str(e)}")
+
+@router.get("/inv-tiendas/summary", tags=["Reportes y Análisis"])
+def get_inv_tiendas_summary(
+    fecha: str = Query(..., description="Fecha de inventario a consultar (YYYY-MM-DD)"),
+    warehouse_code: List[str] = Query(None, description="Una o varias tiendas (WarehouseCode) a filtrar"),
+    referencia: List[str] = Query(None, description="Una o varias referencias a filtrar")
+):
+    """Retorna un resumen general y por formato del inventario de tiendas (inv_tiendas) para una fecha dada."""
+    try:
+        return resumen_inventario_tiendas(fecha, warehouse_code, referencia)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando resumen de inventario: {str(e)}")
+
+@router.get("/inv-tiendas/export", tags=["Reportes y Análisis"])
+def export_inv_tiendas(
+    fecha: str = Query(..., description="Fecha de inventario a exportar (YYYY-MM-DD)"),
+    warehouse_code: List[str] = Query(None, description="Una o varias tiendas (WarehouseCode) a filtrar"),
+    referencia: List[str] = Query(None, description="Una o varias referencias a filtrar")
+):
+    """Exporta la sábana completa de inventario de tiendas (inv_tiendas) para una fecha dada."""
+    try:
+        df = exportar_inventario_tiendas(fecha, warehouse_code, referencia)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, sheet_name="Inventario Tiendas", index=False)
+        output.seek(0)
+        filename = f"inventario_tiendas_{fecha}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando inventario: {str(e)}")
 
 @router.post("/sabana-outlet/generate", tags=["Sabana Outlet"])
 async def generate_sabana_outlet_endpoint(
