@@ -728,6 +728,29 @@
       color: #fda4af;
     }
 
+    .stat-card-relief {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(160deg, #eaf4ff 0%, #dbeafe 100%);
+      border: 1px solid #93c5fd;
+      box-shadow: 0 3px 8px rgba(30, 64, 175, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .stat-card-relief .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+      color: #3b5a85;
+      margin-bottom: 6px;
+    }
+
+    .stat-card-relief .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e3a5f;
+    }
+
     /* ── Animations ── */
     @keyframes fade-in-up {
       from {
@@ -2443,7 +2466,7 @@
               </p>
               <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
                 Compara el porcentaje de agotados (`SUM(agotado) / COUNT(*)`) entre dos días específicos para analizar la variación por formato y referencia.
-                Aplica filtros automáticos para grupo <strong>TEXTIL</strong>, marcas activas y clasificaciones procesadas específicas.
+                Aplica filtros automáticos por grupo (TEXTIL por defecto), marcas activas y clasificaciones procesadas específicas.
               </p>
             </div>
 
@@ -2464,6 +2487,18 @@
                   <i data-lucide="calendar" style="width: 14px; margin-right: 4px;"></i>
                   Establecer Viernes y Lunes Pasados
                 </button>
+              </div>
+
+              <div class="setting-group" style="align-items: flex-start; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+                <h4 style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Filtrar Grupos</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; width: 100%;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="BOLSA" class="custom-cb"> BOLSA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="BONOS" class="custom-cb"> BONOS</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="NO TEXTIL" class="custom-cb"> NO TEXTIL</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="POP" class="custom-cb"> POP</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="PROTECCIÓN" class="custom-cb"> PROTECCIÓN</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="c-grupo" value="TEXTIL" checked class="custom-cb"> TEXTIL</label>
+                </div>
               </div>
 
               <div class="setting-group" style="align-items: flex-start; flex-direction: column; gap: 8px;">
@@ -2502,40 +2537,49 @@
               <h3 style="font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 16px;">
                 Resumen General
               </h3>
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 12px;">
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(14, 165, 233, 0.03);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Registros Día 1</div>
-                  <div id="compare-general-registros-1" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0</div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px;">
+                <div class="stat-card-relief">
+                  <div class="stat-label">Registros <span class="compare-dia1-label">Día 1</span></div>
+                  <div id="compare-general-registros-1" class="stat-value">0</div>
                 </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(14, 165, 233, 0.03);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Agotados Día 1</div>
-                  <div id="compare-general-agotados-1" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0</div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">Agotados <span class="compare-dia1-label">Día 1</span></div>
+                  <div id="compare-general-agotados-1" class="stat-value">0</div>
                 </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(14, 165, 233, 0.03);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">% Agotado Día 1</div>
-                  <div id="compare-general-pct-1" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0.00%</div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">% Agotado <span class="compare-dia1-label">Día 1</span></div>
+                  <div id="compare-general-pct-1" class="stat-value">0.00%</div>
                 </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.05);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Registros Día 2</div>
-                  <div id="compare-general-registros-2" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0</div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">Registros <span class="compare-dia2-label">Día 2</span></div>
+                  <div id="compare-general-registros-2" class="stat-value">0</div>
                 </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.05);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Agotados Día 2</div>
-                  <div id="compare-general-agotados-2" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0</div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">Agotados <span class="compare-dia2-label">Día 2</span></div>
+                  <div id="compare-general-agotados-2" class="stat-value">0</div>
                 </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(16, 185, 129, 0.05);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">% Agotado Día 2</div>
-                  <div id="compare-general-pct-2" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0.00%</div>
-                </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(124, 58, 237, 0.05);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Variación General</div>
-                  <div id="compare-general-variation" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0.00%</div>
-                </div>
-                <div style="padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: rgba(239, 68, 68, 0.08);">
-                  <div style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Referencias que se agotaron</div>
-                  <div id="compare-general-agotadas-count" style="font-size: 20px; font-weight: 700; color: var(--text-main);">0</div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">% Agotado <span class="compare-dia2-label">Día 2</span></div>
+                  <div id="compare-general-pct-2" class="stat-value">0.00%</div>
                 </div>
               </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+                <div class="stat-card-relief">
+                  <div class="stat-label">Variación General</div>
+                  <div id="compare-general-variation" class="stat-value">0.00%</div>
+                </div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">SKUs que se agotaron</div>
+                  <div id="compare-general-agotadas-count" class="stat-value">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div id="compare-formatos-section" style="display: none; margin-bottom: 32px;">
+              <h3 style="font-size: 16px; font-weight: 600; color: var(--text-main); margin-bottom: 16px;">
+                Resumen por Formato
+              </h3>
+              <div id="compare-formatos-container"></div>
             </div>
 
             <div style="margin-bottom: 32px;">
@@ -2561,8 +2605,8 @@
                       <th style="padding: 12px; border-bottom: 1px solid var(--border);">Referencia</th>
                       <th style="padding: 12px; border-bottom: 1px solid var(--border);">Talla</th>
                       <th style="padding: 12px; border-bottom: 1px solid var(--border);">Color</th>
-                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock Día 1</th>
-                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock Día 2</th>
+                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock <span class="compare-dia1-label">Día 1</span></th>
+                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock <span class="compare-dia2-label">Día 2</span></th>
                       <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">¿Se Agotó?</th>
                     </tr>
                   </thead>
@@ -4132,6 +4176,10 @@
       return Array.from(document.querySelectorAll('input[name="c-formato"]:checked')).map(cb => cb.value);
     }
 
+    function getSelectedCompareGroups() {
+      return Array.from(document.querySelectorAll('input[name="c-grupo"]:checked')).map(cb => cb.value);
+    }
+
     async function consultarComparacionAgotados() {
       const fecha1 = document.getElementById('input-fecha-compare-1').value;
       const fecha2 = document.getElementById('input-fecha-compare-2').value;
@@ -4146,21 +4194,31 @@
         alert("Por favor selecciona ambas fechas.");
         return;
       }
-      
+
+      const grupos = getSelectedCompareGroups();
+      if (grupos.length === 0) {
+        alert("Por favor selecciona al menos un grupo.");
+        return;
+      }
+
+      document.querySelectorAll('.compare-dia1-label').forEach(el => el.textContent = fecha1);
+      document.querySelectorAll('.compare-dia2-label').forEach(el => el.textContent = fecha2);
+
       btn.disabled = true;
       loader.style.display = 'block';
       textBtn.textContent = 'Comparando...';
       status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Procesando datos comparativos de SQL Server...</div>';
       results.style.display = 'none';
       lucide.createIcons();
-      
+
       const formatos = getSelectedCompareFormats();
-      
+
       try {
         const queryParams = new URLSearchParams({
           fecha_1: fecha1,
           fecha_2: fecha2,
-          formatos: JSON.stringify(formatos)
+          formatos: JSON.stringify(formatos),
+          grupos: JSON.stringify(grupos)
         });
         
         const response = await fetch(`/agotados/compare?${queryParams}`);
@@ -4172,24 +4230,26 @@
         const data = await response.json();
         const general = data.resumen_general || {};
 
-        document.getElementById('compare-general-registros-1').textContent = Number(general.registros_dia1 || 0);
-        document.getElementById('compare-general-agotados-1').textContent = Number(general.agotados_dia1 || 0);
-        document.getElementById('compare-general-pct-1').textContent = `${(Number(general.pct_agotado_dia1 || 0)).toFixed(2)}%`;
-        document.getElementById('compare-general-registros-2').textContent = Number(general.registros_dia2 || 0);
-        document.getElementById('compare-general-agotados-2').textContent = Number(general.agotados_dia2 || 0);
-        document.getElementById('compare-general-pct-2').textContent = `${(Number(general.pct_agotado_dia2 || 0)).toFixed(2)}%`;
+        document.getElementById('compare-general-registros-1').textContent = Number(general.registros_dia1 || 0).toLocaleString('es-CO');
+        document.getElementById('compare-general-agotados-1').textContent = Number(general.agotados_dia1 || 0).toLocaleString('es-CO');
+        document.getElementById('compare-general-pct-1').textContent = `${(Number(general.pct_agotado_dia1 || 0)).toFixed(1)}%`;
+        document.getElementById('compare-general-registros-2').textContent = Number(general.registros_dia2 || 0).toLocaleString('es-CO');
+        document.getElementById('compare-general-agotados-2').textContent = Number(general.agotados_dia2 || 0).toLocaleString('es-CO');
+        document.getElementById('compare-general-pct-2').textContent = `${(Number(general.pct_agotado_dia2 || 0)).toFixed(1)}%`;
 
         const variationGeneral = Number(general.variacion_pct || 0);
         const variationGeneralEl = document.getElementById('compare-general-variation');
-        variationGeneralEl.textContent = `${variationGeneral > 0 ? '+' : ''}${variationGeneral.toFixed(2)}%`;
-        variationGeneralEl.style.color = variationGeneral > 0 ? '#fda4af' : variationGeneral < 0 ? '#6ee7b7' : 'var(--text-muted)';
-        document.getElementById('compare-general-agotadas-count').textContent = Number(general.referencias_agotaron || general.skus_agotaron || 0);
-        document.getElementById('compare-agotadas-count-text').textContent = `Se encontraron ${Number(general.referencias_agotaron || general.skus_agotaron || 0)} referencias que pasaron de no agotado a agotado entre ${fecha1} y ${fecha2}.`;
+        variationGeneralEl.textContent = `${variationGeneral > 0 ? '+' : ''}${variationGeneral.toFixed(1)}%`;
+        variationGeneralEl.style.color = variationGeneral > 0 ? '#b91c1c' : variationGeneral < 0 ? '#047857' : '';
+        const agotadasCount = Number(general.referencias_agotaron || general.skus_agotaron || 0);
+        document.getElementById('compare-general-agotadas-count').textContent = agotadasCount.toLocaleString('es-CO');
+        document.getElementById('compare-agotadas-count-text').textContent = `Se encontraron ${agotadasCount.toLocaleString('es-CO')} SKUs (tienda + referencia + talla) que pasaron de no agotado a agotado entre ${fecha1} y ${fecha2}.`;
 
         compareAgotadasRefsData = Array.isArray(data.referencias_agotadas) ? data.referencias_agotadas : [];
         status.innerHTML = '';
         results.style.display = 'block';
         renderAgotadasRefs(compareAgotadasRefsData);
+        renderResumenFormatos(Array.isArray(data.resumen_formatos) ? data.resumen_formatos : [], fecha1, fecha2);
       } catch (err) {
         console.error(err);
         status.innerHTML = `<div class="status-msg error"><i data-lucide="x-circle"></i> Error al consultar comparación: ${err.message}</div>`;
@@ -4212,11 +4272,11 @@
         let varBadge = '';
         const varVal = row.variacion_pct;
         if (varVal > 0) {
-          varBadge = `<span style="color: #fda4af; font-weight: 700;">+${varVal.toFixed(2)}% 📈</span>`;
+          varBadge = `<span style="color: #fda4af; font-weight: 700;">+${varVal.toFixed(1)}% 📈</span>`;
         } else if (varVal < 0) {
-          varBadge = `<span style="color: #6ee7b7; font-weight: 700;">${varVal.toFixed(2)}% 📉</span>`;
+          varBadge = `<span style="color: #6ee7b7; font-weight: 700;">${varVal.toFixed(1)}% 📉</span>`;
         } else {
-          varBadge = `<span style="color: var(--text-muted); font-weight: 600;">0.00%</span>`;
+          varBadge = `<span style="color: var(--text-muted); font-weight: 600;">0.0%</span>`;
         }
         
         const seAgotoBadge = row.se_agoto 
@@ -4227,8 +4287,8 @@
           <td style="padding: 12px; font-weight: 600; color: var(--primary-light);">${row.Referencia || row.REFERENCIA}</td>
           <td style="padding: 12px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${row.Descripción || row.DESCRIPCION || ''}</td>
           <td style="padding: 12px;">${row.Formato || row.FORMATO}</td>
-          <td style="padding: 12px; text-align: center;">${row.pct_agotado_dia1.toFixed(2)}%</td>
-          <td style="padding: 12px; text-align: center; font-weight: 600;">${row.pct_agotado_dia2.toFixed(2)}%</td>
+          <td style="padding: 12px; text-align: center;">${row.pct_agotado_dia1.toFixed(1)}%</td>
+          <td style="padding: 12px; text-align: center; font-weight: 600;">${row.pct_agotado_dia2.toFixed(1)}%</td>
           <td style="padding: 12px; text-align: center;">${varBadge}</td>
           <td style="padding: 12px; text-align: center;">${seAgotoBadge}</td>
         `;
@@ -4264,6 +4324,67 @@
       });
     }
 
+    function renderResumenFormatos(list, fecha1, fecha2) {
+      const section = document.getElementById('compare-formatos-section');
+      const container = document.getElementById('compare-formatos-container');
+      container.innerHTML = '';
+
+      if (!list.length) {
+        section.style.display = 'none';
+        return;
+      }
+
+      list.forEach(row => {
+        const variacion = Number(row.variacion_pct || 0);
+        const variacionColor = variacion > 0 ? '#b91c1c' : variacion < 0 ? '#047857' : '';
+
+        const block = document.createElement('div');
+        block.style.cssText = 'padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 16px;';
+        block.innerHTML = `
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">${row.FORMATO || 'SIN FORMATO'}</h4>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px;">
+            <div class="stat-card-relief">
+              <div class="stat-label">Registros ${fecha1}</div>
+              <div class="stat-value">${Number(row.registros_dia1 || 0).toLocaleString('es-CO')}</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">Agotados ${fecha1}</div>
+              <div class="stat-value">${Number(row.agotados_dia1 || 0).toLocaleString('es-CO')}</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">% Agotado ${fecha1}</div>
+              <div class="stat-value">${Number(row.pct_agotado_dia1 || 0).toFixed(1)}%</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">Registros ${fecha2}</div>
+              <div class="stat-value">${Number(row.registros_dia2 || 0).toLocaleString('es-CO')}</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">Agotados ${fecha2}</div>
+              <div class="stat-value">${Number(row.agotados_dia2 || 0).toLocaleString('es-CO')}</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">% Agotado ${fecha2}</div>
+              <div class="stat-value">${Number(row.pct_agotado_dia2 || 0).toFixed(1)}%</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+            <div class="stat-card-relief">
+              <div class="stat-label">Variación</div>
+              <div class="stat-value" style="color: ${variacionColor};">${variacion > 0 ? '+' : ''}${variacion.toFixed(1)}%</div>
+            </div>
+            <div class="stat-card-relief">
+              <div class="stat-label">SKUs que se agotaron</div>
+              <div class="stat-value">${Number(row.referencias_agotaron || 0).toLocaleString('es-CO')}</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(block);
+      });
+
+      section.style.display = 'block';
+    }
+
     function filtrarComparacionRef() {
       const text = document.getElementById('search-compare-ref').value.toUpperCase();
       if (!text) {
@@ -4283,14 +4404,21 @@
       const fecha1 = document.getElementById('input-fecha-compare-1').value;
       const fecha2 = document.getElementById('input-fecha-compare-2').value;
       if (!fecha1 || !fecha2) return;
-      
+
+      const grupos = getSelectedCompareGroups();
+      if (grupos.length === 0) {
+        alert("Por favor selecciona al menos un grupo.");
+        return;
+      }
+
       const formatos = getSelectedCompareFormats();
       const queryParams = new URLSearchParams({
         fecha_1: fecha1,
         fecha_2: fecha2,
-        formatos: JSON.stringify(formatos)
+        formatos: JSON.stringify(formatos),
+        grupos: JSON.stringify(grupos)
       });
-      
+
       window.location.href = `/agotados/compare/export?${queryParams}`;
     }
 

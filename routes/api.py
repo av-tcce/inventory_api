@@ -954,21 +954,25 @@ def export_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None
 
 
 @router.get("/agotados/compare", tags=["Comparación de Agotados"])
-def get_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)):
+def get_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None), grupos: str = Query(None)):
     """
     Compara el comportamiento de los agotados entre dos fechas por formato y referencia.
     """
     import json
     try:
         formatos_list = json.loads(formatos) if formatos else None
+        grupos_list = json.loads(grupos) if grupos else None
 
-        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list)
+        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list, grupos_list)
         res_agotadas = result["referencias_agotadas"]
         res_general = result["resumen_general"]
+        res_formatos = result["resumen_formatos"]
         res_agotadas_dict = res_agotadas.replace([float('inf'), float('-inf')], None).fillna("").to_dict(orient="records")
+        res_formatos_dict = res_formatos.replace([float('inf'), float('-inf')], None).fillna("").to_dict(orient="records")
         return {
             "referencias_agotadas": res_agotadas_dict,
-            "resumen_general": res_general
+            "resumen_general": res_general,
+            "resumen_formatos": res_formatos_dict
         }
     except Exception as e:
         import traceback
@@ -976,15 +980,16 @@ def get_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/agotados/compare/export", tags=["Comparación de Agotados"])
-def export_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)):
+def export_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None), grupos: str = Query(None)):
     """
     Genera y descarga el archivo Excel completo con la comparación de agotados.
     """
     import json
     try:
         formatos_list = json.loads(formatos) if formatos else None
-        
-        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list)
+        grupos_list = json.loads(grupos) if grupos else None
+
+        result = agotados_compare_service.compare_agotados_data(fecha_1, fecha_2, formatos_list, grupos_list)
         
         if result["resumen_formatos"].empty and result["detalle_referencias"].empty:
             raise HTTPException(status_code=404, detail="No se encontraron datos para las fechas seleccionadas.")

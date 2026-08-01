@@ -7,7 +7,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 class AgotadosCompareService:
-    def compare_agotados_data(self, fecha_1: str, fecha_2: str, formatos: list = None):
+    def compare_agotados_data(self, fecha_1: str, fecha_2: str, formatos: list = None, grupos: list = None):
         """
         Compara agotados por SKU (CODALMACEN, REFERENCIA, TALLA) y retorna:
         - resumen general
@@ -16,16 +16,19 @@ class AgotadosCompareService:
         conn = None
         try:
             conn = pyodbc.connect(settings.get_connection_string())
+            grupos_filtro = grupos if grupos and len(grupos) > 0 else ['TEXTIL']
+            grupos_str = "', '".join(grupos_filtro)
             # Query base con los filtros solicitados por el usuario
             query = f"""
-                SELECT CAST(FECHA AS DATE) as FECHA, REFERENCIA, DESCRIPCION, FORMATO, TALLA, COLOR, CODALMACEN, STOCK, MINIMO
+                SELECT CAST(FECHA AS DATE) as FECHA, REFERENCIA, DESCRIPCION, FORMATO, TALLA, COLOR, CODALMACEN, STOCK, MINIMO, CEROS
                 FROM tblAgotados
                 WHERE CAST(FECHA AS DATE) IN ('{fecha_1}', '{fecha_2}')
-                  AND GRUPO = 'TEXTIL'
+                  AND GRUPO IN ('{grupos_str}')
                   AND MINIMO > 0
                   AND ISNULL(Exclusiones, '') <> 'Excluir'
+                  AND ISNULL(Aperturas, '') <> 'Excluir'
                   AND ESTADO = 'ACTIVA'
-                  AND CLASIFICACION_PROCESADA IN ('MTA', 'MTA-CM', 'MTA-O', 'MTO-M')
+                  AND CLASIFICACION_PROCESADA IN ('MTA', 'MTA-C', 'MTA-O', 'MTO-M')
             """
             if formatos and len(formatos) > 0:
                 formatos_str = "', '".join(formatos)
@@ -45,7 +48,9 @@ class AgotadosCompareService:
                         "variacion_pct": 0.0,
                         "referencias_agotaron": 0,
                         "skus_agotaron": 0
-                    }
+                    },
+                    "resumen_formatos": pd.DataFrame(),
+                    "detalle_referencias": pd.DataFrame()
                 }
             # Normalizar valores de columnas
             for col in ['REFERENCIA','DESCRIPCION','FORMATO','TALLA','COLOR','CODALMACEN','ALMACEN']:
@@ -53,18 +58,20 @@ class AgotadosCompareService:
                     df[col] = df[col].fillna("").astype(str).str.strip()
             df['STOCK'] = pd.to_numeric(df['STOCK'], errors='coerce').fillna(0).astype(int)
             df['MINIMO'] = pd.to_numeric(df['MINIMO'], errors='coerce').fillna(0).astype(int)
+            df['CEROS'] = pd.to_numeric(df['CEROS'], errors='coerce').fillna(0).astype(int)
             df['FECHA'] = df['FECHA'].astype(str)
             # --- 1. Resumen General ---
             dia1 = df[df['FECHA'] == fecha_1]
             dia2 = df[df['FECHA'] == fecha_2]
-            dia1['agotado'] = ((dia1['STOCK'] == 0) & (dia1['MINIMO'] > 0)).astype(int)
-            dia2['agotado'] = ((dia2['STOCK'] == 0) & (dia2['MINIMO'] > 0)).astype(int)
+            # Agotado se determina con la columna CEROS (CEROS = 1 -> SKU agotado)
+            dia1['agotado'] = (dia1['CEROS'] == 1).astype(int)
+            dia2['agotado'] = (dia2['CEROS'] == 1).astype(int)
             dia1_registros = int(dia1.shape[0])
             dia1_agotados = int(dia1['agotado'].sum())
             dia2_registros = int(dia2.shape[0])
             dia2_agotados = int(dia2['agotado'].sum())
-            pct_dia1 = round((dia1_agotados / dia1_registros * 100), 2) if dia1_registros else 0.0
-            pct_dia2 = round((dia2_agotados / dia2_registros * 100), 2) if dia2_registros else 0.0
+            pct_dia1 = round((dia1_agotados / dia1_registros * 100), 1) if dia1_registros else 0.0
+            pct_dia2 = round((dia2_agotados / dia2_registros * 100), 1) if dia2_registros else 0.0
             resumen_general = {
                 "registros_dia1": dia1_registros,
                 "agotados_dia1": dia1_agotados,
@@ -72,7 +79,7 @@ class AgotadosCompareService:
                 "registros_dia2": dia2_registros,
                 "agotados_dia2": dia2_agotados,
                 "pct_agotado_dia2": pct_dia2,
-                "variacion_pct": round(pct_dia2 - pct_dia1, 2),
+                "variacion_pct": round(pct_dia2 - pct_dia1, 1),
                 "referencias_agotaron": 0,
                 "skus_agotaron": 0
             }
@@ -80,14 +87,16 @@ class AgotadosCompareService:
             # Unir por clave SKU: CODALMACEN, REFERENCIA, TALLA
             sku_cols = ['CODALMACEN','REFERENCIA','TALLA']
             merge_cols = sku_cols + ['DESCRIPCION','FORMATO','COLOR']
-            dia1_sku = dia1[merge_cols + ['STOCK']].rename(columns={'STOCK':'stock_dia1'})
-            dia2_sku = dia2[merge_cols + ['STOCK']].rename(columns={'STOCK':'stock_dia2'})
+            dia1_sku = dia1[merge_cols + ['STOCK','CEROS']].rename(columns={'STOCK':'stock_dia1','CEROS':'ceros_dia1'})
+            dia2_sku = dia2[merge_cols + ['STOCK','CEROS']].rename(columns={'STOCK':'stock_dia2','CEROS':'ceros_dia2'})
             sku_cmp = pd.merge(dia1_sku, dia2_sku, on=merge_cols, how='outer')
-            sku_cmp[['stock_dia1','stock_dia2']] = sku_cmp[['stock_dia1','stock_dia2']].fillna(0)
+            sku_cmp[['stock_dia1','stock_dia2','ceros_dia1','ceros_dia2']] = sku_cmp[
+                ['stock_dia1','stock_dia2','ceros_dia1','ceros_dia2']
+            ].fillna(0)
             for col in merge_cols:
                 sku_cmp[col] = sku_cmp[col].fillna("").astype(str).str.strip()
-            sku_cmp['agotado_dia1'] = (sku_cmp['stock_dia1'] == 0).astype(int)
-            sku_cmp['agotado_dia2'] = (sku_cmp['stock_dia2'] == 0).astype(int)
+            sku_cmp['agotado_dia1'] = (sku_cmp['ceros_dia1'] == 1).astype(int)
+            sku_cmp['agotado_dia2'] = (sku_cmp['ceros_dia2'] == 1).astype(int)
             # Se agotó: no estaba agotado en día 1 y sí en día 2
             sku_cmp['se_agoto'] = (sku_cmp['agotado_dia1'] == 0) & (sku_cmp['agotado_dia2'] == 1)
             referencias_agotadas = sku_cmp[sku_cmp['se_agoto']].copy()
@@ -110,14 +119,19 @@ class AgotadosCompareService:
                 ['registros_dia1','agotados_dia1','registros_dia2','agotados_dia2']
             ].astype(int)
             resumen_formatos['pct_agotado_dia1'] = resumen_formatos.apply(
-                lambda row: round((row['agotados_dia1'] / row['registros_dia1'] * 100), 2) if row['registros_dia1'] else 0.0,
+                lambda row: round((row['agotados_dia1'] / row['registros_dia1'] * 100), 1) if row['registros_dia1'] else 0.0,
                 axis=1
             )
             resumen_formatos['pct_agotado_dia2'] = resumen_formatos.apply(
-                lambda row: round((row['agotados_dia2'] / row['registros_dia2'] * 100), 2) if row['registros_dia2'] else 0.0,
+                lambda row: round((row['agotados_dia2'] / row['registros_dia2'] * 100), 1) if row['registros_dia2'] else 0.0,
                 axis=1
             )
-            resumen_formatos['variacion_pct'] = round(resumen_formatos['pct_agotado_dia2'] - resumen_formatos['pct_agotado_dia1'], 2)
+            resumen_formatos['variacion_pct'] = round(resumen_formatos['pct_agotado_dia2'] - resumen_formatos['pct_agotado_dia1'], 1)
+
+            agotadas_por_formato = referencias_agotadas.groupby('FORMATO', dropna=False).size().rename('referencias_agotaron')
+            resumen_formatos = resumen_formatos.merge(agotadas_por_formato, on='FORMATO', how='left')
+            resumen_formatos['referencias_agotaron'] = resumen_formatos['referencias_agotaron'].fillna(0).astype(int)
+
             resumen_formatos = resumen_formatos.sort_values(by='FORMATO').reset_index(drop=True)
 
             detalle_referencias = referencias_agotadas.copy()
