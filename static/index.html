@@ -939,6 +939,29 @@
             <i data-lucide="corner-down-left"></i>
             Devoluciones Tiendas y Outlets
           </button>
+          <button type="button" class="nav-item" data-target="module-planner"
+            onclick="toggleSubmenu('submenu-planner')">
+            <i data-lucide="clipboard-check"></i>
+            Planner de Asignaciones
+            <i data-lucide="chevron-down" class="submenu-icon" style="margin-left:auto;"></i>
+          </button>
+          <div id="submenu-planner" class="submenu" style="display:none; margin-left:16px;">
+            <button type="button" class="nav-item" data-target="module-planner-registro"
+              onclick="switchModule('module-planner-registro', this)">
+              <i data-lucide="plus-circle"></i>
+              Registro
+            </button>
+            <button type="button" class="nav-item" data-target="module-planner-gestion"
+              onclick="switchModule('module-planner-gestion', this)">
+              <i data-lucide="list-checks"></i>
+              Gestión
+            </button>
+            <button type="button" class="nav-item" data-target="module-planner-graficos"
+              onclick="switchModule('module-planner-graficos', this)">
+              <i data-lucide="bar-chart-3"></i>
+              Gráficos
+            </button>
+          </div>
 
                     <button type="button" class="nav-item" data-target="module-trivia"
             onclick="switchModule('module-trivia', this)">
@@ -2840,7 +2863,286 @@
           </div>
         </section>
 
-        
+        <section id="module-planner-registro" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="plus-circle"></i>
+              </div>
+              <div class="card-title">Registro de Actividad</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Registra una nueva actividad asignada al equipo.
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Escribe directamente sobre <strong>Planner.xlsx</strong> (hoja Control Principal). Para editar o eliminar una actividad existente, ve a la sección <strong>Gestión</strong>.
+              </p>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Asignación</label>
+                  <input type="date" id="planner-reg-fecha-asignacion" class="input-field" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Usuario que asigna</label>
+                  <select id="planner-reg-usuario-asigna" class="input-field planner-select-usuario" style="width: 100%;"></select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Actividad</label>
+                  <input type="text" id="planner-reg-actividad" class="input-field" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Prioridad</label>
+                  <select id="planner-reg-prioridad" class="input-field planner-select-prioridad" style="width: 100%;"></select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Estado</label>
+                  <select id="planner-reg-estado" class="input-field planner-select-estado" style="width: 100%;"></select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Usuario Responsable Asignado</label>
+                  <select id="planner-reg-usuario-responsable" class="input-field planner-select-usuario" style="width: 100%;"></select>
+                </div>
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Descripción / Qué hacer</label>
+                  <textarea id="planner-reg-descripcion" class="input-field" rows="2" style="width: 100%; resize: vertical;"></textarea>
+                </div>
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Notas</label>
+                  <textarea id="planner-reg-notas" class="input-field" rows="2" style="width: 100%; resize: vertical;"></textarea>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha límite de entrega</label>
+                  <input type="date" id="planner-reg-fecha-limite" class="input-field" style="width: 100%;">
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-planner-reg-guardar" onclick="registrarAsignacionPlanner()">
+                  <i data-lucide="save" style="width: 18px"></i>
+                  Registrar Actividad
+                </button>
+              </div>
+              <div id="planner-reg-status" style="margin-top: 14px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="module-planner-gestion" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">02</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="list-checks"></i>
+              </div>
+              <div class="card-title">Gestión de Asignaciones</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Edita, actualiza el estado o elimina actividades existentes.
+              </p>
+            </div>
+
+            <div class="settings-panel" id="planner-edit-form-panel" style="display: none; margin-bottom: 24px;">
+              <div class="setting-label">
+                <h4 id="planner-edit-form-title">Editando Asignación</h4>
+              </div>
+              <input type="hidden" id="planner-edit-id" value="">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Asignación</label>
+                  <input type="date" id="planner-edit-fecha-asignacion" class="input-field" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Usuario que asigna</label>
+                  <select id="planner-edit-usuario-asigna" class="input-field planner-select-usuario" style="width: 100%; background: var(--surface); cursor: not-allowed;" disabled></select>
+                  <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">No se puede modificar quién generó la actividad.</p>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Actividad</label>
+                  <input type="text" id="planner-edit-actividad" class="input-field" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Prioridad</label>
+                  <select id="planner-edit-prioridad" class="input-field planner-select-prioridad" style="width: 100%;"></select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Estado</label>
+                  <select id="planner-edit-estado" class="input-field planner-select-estado" style="width: 100%;"></select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Usuario Responsable Asignado</label>
+                  <select id="planner-edit-usuario-responsable" class="input-field planner-select-usuario" style="width: 100%;"></select>
+                </div>
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Descripción / Qué hacer</label>
+                  <textarea id="planner-edit-descripcion" class="input-field" rows="2" style="width: 100%; resize: vertical;"></textarea>
+                </div>
+                <div style="grid-column: span 2;">
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Notas</label>
+                  <textarea id="planner-edit-notas" class="input-field" rows="2" style="width: 100%; resize: vertical;"></textarea>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha límite de entrega</label>
+                  <input type="date" id="planner-edit-fecha-limite" class="input-field" style="width: 100%;">
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-planner-edit-guardar" onclick="actualizarAsignacionPlanner()">
+                  <i data-lucide="save" style="width: 18px"></i>
+                  Actualizar
+                </button>
+                <button class="btn btn-outline" onclick="cancelarEdicionPlanner()">Cancelar edición</button>
+              </div>
+              <div id="planner-edit-status" style="margin-top: 14px;"></div>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 20px;">
+              <div class="setting-label">
+                <h4>Filtros</h4>
+                <p>Por defecto se muestran las actividades Pendientes y En Proceso.</p>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Responsable</label>
+                  <select id="planner-filtro-responsable" class="input-field" style="width: 100%;" onchange="aplicarFiltrosPlannerGestion()">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Prioridad</label>
+                  <select id="planner-filtro-prioridad" class="input-field" style="width: 100%;" onchange="aplicarFiltrosPlannerGestion()">
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Asignación Desde</label>
+                  <input type="date" id="planner-filtro-fecha-desde" class="input-field" style="width: 100%;" onchange="aplicarFiltrosPlannerGestion()">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Asignación Hasta</label>
+                  <input type="date" id="planner-filtro-fecha-hasta" class="input-field" style="width: 100%;" onchange="aplicarFiltrosPlannerGestion()">
+                </div>
+              </div>
+              <div>
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Estado</label>
+                <div id="planner-filtro-estado-checks" style="display: flex; flex-wrap: wrap; gap: 6px 16px;"></div>
+              </div>
+              <div style="margin-top: 14px;">
+                <button class="btn btn-outline" onclick="limpiarFiltrosPlannerGestion()" style="font-size: 12px; padding: 6px 12px;">
+                  <i data-lucide="x" style="width: 14px; margin-right: 4px;"></i>
+                  Limpiar filtros
+                </button>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 16px; font-weight: 600; color: var(--text-main); margin: 0;">Asignaciones</h3>
+              <button class="btn btn-outline" onclick="cargarAsignacionesPlanner()" style="font-size: 12px; padding: 6px 12px;">
+                <i data-lucide="refresh-cw" style="width: 14px; margin-right: 4px;"></i>
+                Actualizar lista
+              </button>
+            </div>
+            <div id="planner-list-status" style="margin-bottom: 14px;"></div>
+
+            <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 500px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead style="background: var(--surface); position: sticky; top: 0;">
+                  <tr>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">ID</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Fecha Asig.</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Asigna</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Actividad</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Prioridad</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Estado</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Responsable</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Descripción</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Notas</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Actualizado</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Fecha Límite</th>
+                    <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Fecha Cierre</th>
+                    <th style="padding: 10px; text-align:center; border-bottom:1px solid var(--border);">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="planner-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="module-planner-graficos" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">03</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="bar-chart-3"></i>
+              </div>
+              <div class="card-title">Gráficos del Planner</div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+              <button class="btn btn-outline" onclick="cargarGraficosPlanner()" style="font-size: 12px; padding: 6px 12px;">
+                <i data-lucide="refresh-cw" style="width: 14px; margin-right: 4px;"></i>
+                Actualizar
+              </button>
+            </div>
+            <div id="planner-graficos-status" style="margin-bottom: 16px;"></div>
+
+            <div id="planner-graficos-content" style="display: none;">
+              <div style="display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 24px;">
+                <div class="stat-card-relief">
+                  <div class="stat-label">Total Registros</div>
+                  <div id="planner-kpi-total" class="stat-value">0</div>
+                </div>
+                <div class="stat-card-relief">
+                  <div class="stat-label">Completadas</div>
+                  <div id="planner-kpi-completadas" class="stat-value">0</div>
+                </div>
+                <div class="stat-card-relief">
+                  <div class="stat-label" style="color:#0f766e;">A Tiempo</div>
+                  <div id="planner-kpi-a-tiempo" class="stat-value" style="color:#0f766e;">0</div>
+                </div>
+                <div class="stat-card-relief">
+                  <div class="stat-label" style="color:#b91c1c;">Fuera de Tiempo</div>
+                  <div id="planner-kpi-fuera-tiempo" class="stat-value" style="color:#b91c1c;">0</div>
+                </div>
+              </div>
+
+              <div id="planner-kpi-por-estado" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px;"></div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                <div>
+                  <h4 style="margin-bottom: 12px; font-size: 14px;">Actividades por Estado</h4>
+                  <div style="border: 1px solid var(--border); border-radius: 8px; background: white; padding: 16px; height: 320px;">
+                    <canvas id="planner-chart-estado"></canvas>
+                  </div>
+                </div>
+                <div>
+                  <h4 style="margin-bottom: 12px; font-size: 14px;">Actividades por Responsable</h4>
+                  <div style="border: 1px solid var(--border); border-radius: 8px; background: white; padding: 16px; height: 320px;">
+                    <canvas id="planner-chart-responsable"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 style="margin-bottom: 12px; font-size: 14px;">Cumplimiento de Fecha Límite (actividades completadas)</h4>
+                <div style="border: 1px solid var(--border); border-radius: 8px; background: white; padding: 16px; height: 220px;">
+                  <canvas id="planner-chart-cumplimiento"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
         <section id="module-trivia" class="module-panel">
           <div class="card stagger-1">
             <div class="card-step">T</div>
@@ -3807,6 +4109,21 @@
         case 'module-devolucion':
           titleTxt = "Análisis de Devolución";
           descTxt = "Identificación de productos sin rotación y sugerencia de descuentos dinámicos.";
+          break;
+        case 'module-planner-registro':
+          titleTxt = "Registro de Actividad";
+          descTxt = "Registra nuevas actividades asignadas al equipo (Planner.xlsx).";
+          inicializarModuloPlannerRegistro();
+          break;
+        case 'module-planner-gestion':
+          titleTxt = "Gestión de Asignaciones";
+          descTxt = "Edita, actualiza el estado o elimina actividades existentes.";
+          inicializarModuloPlannerGestion();
+          break;
+        case 'module-planner-graficos':
+          titleTxt = "Gráficos del Planner";
+          descTxt = "Indicadores y gráficos de seguimiento de actividades.";
+          cargarGraficosPlanner();
           break;
         case 'module-sales-analytics':
           titleTxt = "Análisis de Ventas Colombia";
@@ -4877,6 +5194,576 @@
 
       const params = buildParamsInvTiendas(filtros);
       window.location.href = `/inv-tiendas/export?${params.toString()}`;
+    }
+
+    /* ── Planner de Asignaciones Logic ── */
+    let plannerDropdownsLoaded = false;
+    let plannerData = [];
+    let plannerUsuariosCache = [];
+    let plannerPrioridadesCache = [];
+    let plannerEstadosCache = [];
+    let plannerChartEstado = null;
+    let plannerChartResponsable = null;
+    let plannerChartCumplimiento = null;
+
+    function escapeHtmlPlanner(value) {
+      const div = document.createElement('div');
+      div.textContent = value ?? '';
+      return div.innerHTML;
+    }
+
+    async function fetchPlannerLista(url, etiqueta) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        const message = await readErrorMessage(response);
+        throw new Error(`${etiqueta}: ${message || 'Error desconocido'}`);
+      }
+      return response.json();
+    }
+
+    async function cargarDropdownsPlanner() {
+      if (plannerDropdownsLoaded) return;
+      const [usuarios, prioridades, estados] = await Promise.all([
+        fetchPlannerLista('/planner/usuarios', 'Usuarios'),
+        fetchPlannerLista('/planner/prioridades', 'Prioridades'),
+        fetchPlannerLista('/planner/estados', 'Estados')
+      ]);
+
+      plannerUsuariosCache = usuarios;
+      plannerPrioridadesCache = prioridades;
+      plannerEstadosCache = estados;
+
+      document.querySelectorAll('.planner-select-usuario').forEach(select => {
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        usuarios.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u;
+          opt.textContent = u;
+          select.appendChild(opt);
+        });
+      });
+
+      document.querySelectorAll('.planner-select-prioridad').forEach(select => {
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        prioridades.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          select.appendChild(opt);
+        });
+      });
+
+      const estadoPendiente = estados.find(e => (e || '').toLowerCase().includes('pendiente'));
+
+      document.querySelectorAll('.planner-select-estado').forEach(select => {
+        select.innerHTML = '<option value="">Seleccionar...</option>';
+        estados.forEach(e => {
+          const opt = document.createElement('option');
+          opt.value = e;
+          opt.textContent = e;
+          select.appendChild(opt);
+        });
+        if (estadoPendiente) {
+          select.value = estadoPendiente;
+        }
+      });
+
+      poblarFiltrosGestionPlanner();
+
+      plannerDropdownsLoaded = true;
+    }
+
+    function esEstadoPredeterminadoPlanner(estado) {
+      const e = (estado || '').toLowerCase();
+      return e.includes('pendiente') || e.includes('proceso') || e.includes('progreso');
+    }
+
+    function poblarFiltrosGestionPlanner() {
+      const selectResponsable = document.getElementById('planner-filtro-responsable');
+      selectResponsable.innerHTML = '<option value="">Todos</option>';
+      plannerUsuariosCache.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u;
+        opt.textContent = u;
+        selectResponsable.appendChild(opt);
+      });
+
+      const selectPrioridad = document.getElementById('planner-filtro-prioridad');
+      selectPrioridad.innerHTML = '<option value="">Todas</option>';
+      plannerPrioridadesCache.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        selectPrioridad.appendChild(opt);
+      });
+
+      const contenedorEstados = document.getElementById('planner-filtro-estado-checks');
+      contenedorEstados.innerHTML = '';
+      plannerEstadosCache.forEach(estado => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;';
+        const checked = esEstadoPredeterminadoPlanner(estado) ? 'checked' : '';
+        label.innerHTML = `<input type="checkbox" value="${escapeHtmlPlanner(estado)}" ${checked} onchange="aplicarFiltrosPlannerGestion()"> ${escapeHtmlPlanner(estado)}`;
+        contenedorEstados.appendChild(label);
+      });
+    }
+
+    function limpiarFiltrosPlannerGestion() {
+      document.getElementById('planner-filtro-responsable').value = '';
+      document.getElementById('planner-filtro-prioridad').value = '';
+      document.getElementById('planner-filtro-fecha-desde').value = '';
+      document.getElementById('planner-filtro-fecha-hasta').value = '';
+      document.querySelectorAll('#planner-filtro-estado-checks input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+      });
+      aplicarFiltrosPlannerGestion();
+    }
+
+    function normalizarFechaPlanner(value) {
+      if (!value) return '';
+      return String(value).split('T')[0].split(' ')[0];
+    }
+
+    function aplicarFiltrosPlannerGestion() {
+      const responsable = document.getElementById('planner-filtro-responsable').value;
+      const prioridad = document.getElementById('planner-filtro-prioridad').value;
+      const fechaDesde = document.getElementById('planner-filtro-fecha-desde').value;
+      const fechaHasta = document.getElementById('planner-filtro-fecha-hasta').value;
+      const estadosSeleccionados = Array.from(
+        document.querySelectorAll('#planner-filtro-estado-checks input[type="checkbox"]:checked')
+      ).map(cb => cb.value);
+
+      const filtradas = plannerData.filter(row => {
+        if (responsable && row['Usuario Responsable Asignado'] !== responsable) return false;
+        if (prioridad && row['Prioridad'] !== prioridad) return false;
+        if (!estadosSeleccionados.includes(row['Estado'])) return false;
+
+        const fechaAsig = normalizarFechaPlanner(row['Fecha Asignacion']);
+        if (fechaDesde && (!fechaAsig || fechaAsig < fechaDesde)) return false;
+        if (fechaHasta && (!fechaAsig || fechaAsig > fechaHasta)) return false;
+
+        return true;
+      });
+
+      renderTablaPlanner(filtradas);
+    }
+
+    function establecerFechaHoyPorDefecto(inputId) {
+      document.getElementById(inputId).value = new Date().toISOString().split('T')[0];
+    }
+
+    async function inicializarModuloPlannerRegistro() {
+      const fechaInput = document.getElementById('planner-reg-fecha-asignacion');
+      if (!fechaInput.value) {
+        establecerFechaHoyPorDefecto('planner-reg-fecha-asignacion');
+      }
+      try {
+        await cargarDropdownsPlanner();
+      } catch (err) {
+        document.getElementById('planner-reg-status').innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error cargando listas (usuarios/prioridad/estado):</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    async function inicializarModuloPlannerGestion() {
+      try {
+        await cargarDropdownsPlanner();
+      } catch (err) {
+        document.getElementById('planner-list-status').innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error cargando listas (usuarios/prioridad/estado):</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+      await cargarAsignacionesPlanner();
+    }
+
+    function renderTablaPlanner(rows) {
+      const tbody = document.getElementById('planner-table-body');
+      tbody.innerHTML = '';
+      if (rows.length === 0) {
+        const mensaje = plannerData.length === 0
+          ? 'No hay asignaciones registradas.'
+          : 'No hay asignaciones que coincidan con los filtros seleccionados.';
+        tbody.innerHTML = `<tr><td colspan="13" style="padding:16px; text-align:center; color:var(--text-muted);">${mensaje}</td></tr>`;
+        return;
+      }
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row.ID)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha Asignacion'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Usuario que asigna'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Actividad'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Prioridad'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Estado'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Usuario Responsable Asignado'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtmlPlanner(row['Descripción / Qué hacer'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtmlPlanner(row['Notas'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha Updated'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha limite de entrega'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha de cierre'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align:center; white-space:nowrap;">
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="editarAsignacionPlanner(${row.ID})">Editar</button>
+            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="eliminarAsignacionPlanner(${row.ID})">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function cargarAsignacionesPlanner() {
+      const status = document.getElementById('planner-list-status');
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Cargando asignaciones...</div>';
+      lucide.createIcons();
+
+      try {
+        const response = await fetch('/planner/asignaciones');
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al obtener las asignaciones.');
+        }
+        plannerData = await response.json();
+        aplicarFiltrosPlannerGestion();
+        status.innerHTML = '';
+        lucide.createIcons();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al cargar asignaciones:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    function leerFormularioPlanner(prefix) {
+      return {
+        'Fecha Asignacion': document.getElementById(`planner-${prefix}-fecha-asignacion`).value,
+        'Usuario que asigna': document.getElementById(`planner-${prefix}-usuario-asigna`).value,
+        'Actividad': document.getElementById(`planner-${prefix}-actividad`).value.trim(),
+        'Prioridad': document.getElementById(`planner-${prefix}-prioridad`).value,
+        'Estado': document.getElementById(`planner-${prefix}-estado`).value,
+        'Usuario Responsable Asignado': document.getElementById(`planner-${prefix}-usuario-responsable`).value,
+        'Descripción / Qué hacer': document.getElementById(`planner-${prefix}-descripcion`).value.trim(),
+        'Notas': document.getElementById(`planner-${prefix}-notas`).value.trim(),
+        'Fecha limite de entrega': document.getElementById(`planner-${prefix}-fecha-limite`).value
+      };
+    }
+
+    function seleccionarEstadoPendientePorDefecto(selectId) {
+      const estadoPendiente = plannerEstadosCache.find(e => (e || '').toLowerCase().includes('pendiente'));
+      if (estadoPendiente) {
+        document.getElementById(selectId).value = estadoPendiente;
+      }
+    }
+
+    function limpiarFormularioPlanner(prefix) {
+      document.getElementById(`planner-${prefix}-fecha-asignacion`).value = '';
+      document.getElementById(`planner-${prefix}-usuario-asigna`).value = '';
+      document.getElementById(`planner-${prefix}-actividad`).value = '';
+      document.getElementById(`planner-${prefix}-prioridad`).value = '';
+      document.getElementById(`planner-${prefix}-estado`).value = '';
+      document.getElementById(`planner-${prefix}-usuario-responsable`).value = '';
+      document.getElementById(`planner-${prefix}-descripcion`).value = '';
+      document.getElementById(`planner-${prefix}-notas`).value = '';
+      document.getElementById(`planner-${prefix}-fecha-limite`).value = '';
+    }
+
+    async function registrarAsignacionPlanner() {
+      const btn = document.getElementById('btn-planner-reg-guardar');
+      const status = document.getElementById('planner-reg-status');
+      const data = leerFormularioPlanner('reg');
+
+      if (!data['Actividad']) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>El campo Actividad es obligatorio.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Guardando...</div>';
+      lucide.createIcons();
+
+      try {
+        const response = await fetch('/planner/asignaciones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al registrar la actividad.');
+        }
+
+        status.innerHTML = `
+          <div class="status-msg success">
+            <i data-lucide="check-circle" style="width:24px"></i>
+            <div><strong>Actividad registrada.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        limpiarFormularioPlanner('reg');
+        seleccionarEstadoPendientePorDefecto('planner-reg-estado');
+        establecerFechaHoyPorDefecto('planner-reg-fecha-asignacion');
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al registrar:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function cancelarEdicionPlanner() {
+      document.getElementById('planner-edit-form-panel').style.display = 'none';
+      document.getElementById('planner-edit-id').value = '';
+      limpiarFormularioPlanner('edit');
+      document.getElementById('planner-edit-status').innerHTML = '';
+    }
+
+    function editarAsignacionPlanner(id) {
+      const row = plannerData.find(r => Number(r.ID) === Number(id));
+      if (!row) return;
+
+      document.getElementById('planner-edit-id').value = id;
+      document.getElementById('planner-edit-fecha-asignacion').value = row['Fecha Asignacion'] || '';
+      document.getElementById('planner-edit-usuario-asigna').value = row['Usuario que asigna'] || '';
+      document.getElementById('planner-edit-actividad').value = row['Actividad'] || '';
+      document.getElementById('planner-edit-prioridad').value = row['Prioridad'] || '';
+      document.getElementById('planner-edit-estado').value = row['Estado'] || '';
+      document.getElementById('planner-edit-usuario-responsable').value = row['Usuario Responsable Asignado'] || '';
+      document.getElementById('planner-edit-descripcion').value = row['Descripción / Qué hacer'] || '';
+      document.getElementById('planner-edit-notas').value = row['Notas'] || '';
+      document.getElementById('planner-edit-fecha-limite').value = row['Fecha limite de entrega'] || '';
+
+      document.getElementById('planner-edit-form-title').textContent = `Editando Asignación #${id}`;
+      document.getElementById('planner-edit-status').innerHTML = '';
+      document.getElementById('planner-edit-form-panel').style.display = 'block';
+      document.getElementById('planner-edit-form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function actualizarAsignacionPlanner() {
+      const btn = document.getElementById('btn-planner-edit-guardar');
+      const status = document.getElementById('planner-edit-status');
+      const editingId = document.getElementById('planner-edit-id').value;
+      const data = leerFormularioPlanner('edit');
+
+      if (!editingId) return;
+
+      if (!data['Actividad']) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>El campo Actividad es obligatorio.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Guardando...</div>';
+      lucide.createIcons();
+
+      try {
+        const response = await fetch(`/planner/asignaciones/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al actualizar la asignación.');
+        }
+
+        cancelarEdicionPlanner();
+        await cargarAsignacionesPlanner();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al guardar:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function eliminarAsignacionPlanner(id) {
+      if (!confirm(`¿Eliminar la asignación #${id}? Esta acción no se puede deshacer.`)) return;
+
+      const status = document.getElementById('planner-list-status');
+      try {
+        const response = await fetch(`/planner/asignaciones/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al eliminar la asignación.');
+        }
+        await cargarAsignacionesPlanner();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al eliminar:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    /* ── Planner: Gráficos ── */
+    async function cargarGraficosPlanner() {
+      const status = document.getElementById('planner-graficos-status');
+      const content = document.getElementById('planner-graficos-content');
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Cargando reporte...</div>';
+      content.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const response = await fetch('/planner/reporte');
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al obtener el reporte.');
+        }
+        const data = await response.json();
+
+        document.getElementById('planner-kpi-total').textContent = data.total_registros.toLocaleString('es-CO');
+        document.getElementById('planner-kpi-completadas').textContent = data.cumplimiento.total_completadas.toLocaleString('es-CO');
+        document.getElementById('planner-kpi-a-tiempo').textContent = data.cumplimiento.a_tiempo.toLocaleString('es-CO');
+        document.getElementById('planner-kpi-fuera-tiempo').textContent = data.cumplimiento.fuera_de_tiempo.toLocaleString('es-CO');
+
+        const porEstadoContainer = document.getElementById('planner-kpi-por-estado');
+        porEstadoContainer.innerHTML = '';
+        data.por_estado.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'stat-card-relief';
+          div.innerHTML = `
+            <div class="stat-label">${escapeHtmlPlanner(item.Estado)}</div>
+            <div class="stat-value" style="font-size:20px;">${Number(item.count).toLocaleString('es-CO')}</div>
+          `;
+          porEstadoContainer.appendChild(div);
+        });
+
+        renderPlannerChartEstado(data.por_estado);
+        renderPlannerChartResponsable(data.por_responsable);
+        renderPlannerChartCumplimiento(data.cumplimiento);
+
+        status.innerHTML = '';
+        content.style.display = 'block';
+        lucide.createIcons();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al cargar el reporte:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    function renderPlannerChartEstado(porEstado) {
+      if (plannerChartEstado) plannerChartEstado.destroy();
+      plannerChartEstado = new Chart(document.getElementById('planner-chart-estado'), {
+        type: 'bar',
+        data: {
+          labels: porEstado.map(i => i.Estado),
+          datasets: [{
+            label: 'Actividades',
+            data: porEstado.map(i => i.count),
+            backgroundColor: '#1e3a8a',
+            borderRadius: 4,
+            maxBarThickness: 48
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderPlannerChartResponsable(porResponsable) {
+      if (plannerChartResponsable) plannerChartResponsable.destroy();
+      plannerChartResponsable = new Chart(document.getElementById('planner-chart-responsable'), {
+        type: 'bar',
+        data: {
+          labels: porResponsable.map(i => i.Responsable),
+          datasets: [{
+            label: 'Actividades',
+            data: porResponsable.map(i => i.count),
+            backgroundColor: '#0ea5e9',
+            borderRadius: 4,
+            maxBarThickness: 28
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderPlannerChartCumplimiento(cumplimiento) {
+      if (plannerChartCumplimiento) plannerChartCumplimiento.destroy();
+      const labels = ['A Tiempo', 'Fuera de Tiempo', 'Sin Fecha Límite'];
+      const values = [cumplimiento.a_tiempo, cumplimiento.fuera_de_tiempo, cumplimiento.sin_fecha_limite];
+      const colors = ['#0f766e', '#b91c1c', '#94a3b8'];
+
+      plannerChartCumplimiento = new Chart(document.getElementById('planner-chart-cumplimiento'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Actividades completadas',
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 4,
+            maxBarThickness: 60
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
     }
 
     /* ── Consulta de Curvas Logic ── */

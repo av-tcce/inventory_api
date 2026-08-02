@@ -36,6 +36,9 @@ class Config:
     # Archivo Excel para la Consulta de Curvas
     CONSULTA_CURVAS_PATH = os.getenv("CONSULTA_CURVAS_PATH", r"\\10.10.10.56\InteligenciaNegocios\INTELIGENCIA\INTELIGENCIA\CURVAS.xlsx")
 
+    # Archivo Excel para el Planner (Asignaciones)
+    PLANNER_EXCEL_PATH = os.getenv("PLANNER_EXCEL_PATH", r"\\10.10.10.56\InteligenciaNegocios\INTELIGENCIA\INTELIGENCIA\Planner.xlsx")
+
     # API Key de Gemini para el agente inteligente
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 

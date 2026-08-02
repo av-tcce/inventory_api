@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Query
-from typing import List
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Query, Body
+from typing import List, Dict, Any
 from fastapi.responses import Response, StreamingResponse, FileResponse
 from models.schemas import (
     RequestDistribucion, ResponseDistribucion, CurveUpdate, 
@@ -10,6 +10,7 @@ from services.sabana_service import generate_sabana_mto
 from services.unit_request_service import generate_unit_request
 from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia
 from services.inv_tiendas_service import resumen_inventario_tiendas, exportar_inventario_tiendas
+from services import planner_service
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
@@ -490,6 +491,77 @@ def export_inv_tiendas(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando inventario: {str(e)}")
+
+@router.get("/planner/asignaciones", tags=["Planner"])
+def get_planner_asignaciones():
+    """Lista todas las asignaciones del Planner (hoja Control Principal)."""
+    try:
+        return planner_service.listar_asignaciones()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error consultando asignaciones: {str(e)}")
+
+@router.post("/planner/asignaciones", tags=["Planner"])
+def create_planner_asignacion(data: Dict[str, Any] = Body(...)):
+    """Crea una nueva asignación en el Planner."""
+    try:
+        return planner_service.crear_asignacion(data)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error creando asignación: {str(e)}")
+
+@router.put("/planner/asignaciones/{asignacion_id}", tags=["Planner"])
+def update_planner_asignacion(asignacion_id: int, data: Dict[str, Any] = Body(...)):
+    """Actualiza una asignación existente del Planner por ID."""
+    try:
+        return planner_service.actualizar_asignacion(asignacion_id, data)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error actualizando asignación: {str(e)}")
+
+@router.delete("/planner/asignaciones/{asignacion_id}", tags=["Planner"])
+def delete_planner_asignacion(asignacion_id: int):
+    """Elimina una asignación del Planner por ID."""
+    try:
+        planner_service.eliminar_asignacion(asignacion_id)
+        return {"success": True}
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error eliminando asignación: {str(e)}")
+
+@router.get("/planner/usuarios", tags=["Planner"])
+def get_planner_usuarios():
+    """Lista los usuarios disponibles (hoja Usuarios) para poblar el dropdown."""
+    try:
+        return planner_service.get_usuarios()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error consultando usuarios: {str(e)}")
+
+@router.get("/planner/prioridades", tags=["Planner"])
+def get_planner_prioridades():
+    """Lista las prioridades disponibles (hoja Prioridad) para poblar el dropdown."""
+    try:
+        return planner_service.get_prioridades()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error consultando prioridades: {str(e)}")
+
+@router.get("/planner/estados", tags=["Planner"])
+def get_planner_estados():
+    """Lista los estados disponibles (hoja Estados) para poblar el dropdown."""
+    try:
+        return planner_service.get_estados()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error consultando estados: {str(e)}")
+
+@router.get("/planner/reporte", tags=["Planner"])
+def get_planner_reporte():
+    """Resumen para el submódulo de Gráficos: totales, por estado, por responsable y cumplimiento de fechas."""
+    try:
+        return planner_service.obtener_reporte()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte: {str(e)}")
 
 @router.post("/sabana-outlet/generate", tags=["Sabana Outlet"])
 async def generate_sabana_outlet_endpoint(
