@@ -106,6 +106,43 @@ class AgotadosCompareService:
             resumen_general['referencias_agotaron'] = total_agotados
             resumen_general['skus_agotaron'] = total_agotados
 
+            # --- 3. Cruce con inventario de bodega (inv_bodegas) ---
+            # Objetivo: saber si un SKU que se agotó en tienda tiene o no stock
+            # disponible en bodega (PT100) para descartar que el agotado sea por
+            # falta de despacho o por no haberse leído/registrado en bodega.
+            SKU2_SEP = '|'
+            referencias_agotadas['sku2'] = referencias_agotadas['REFERENCIA'] + SKU2_SEP + referencias_agotadas['TALLA']
+
+            query_bodega = """
+                SELECT Reference, Size, TotalStock
+                FROM [INTELIGENCIA].[dbo].[inv_bodegas]
+                WHERE CAST(FechaRegistro AS DATE) = ?
+                  AND PAIS = 'COLOMBIA'
+                  AND WarehouseCode = 'PT100'
+            """
+            df_bodega = pd.read_sql(query_bodega, conn, params=[fecha_1])
+            if not df_bodega.empty:
+                df_bodega['Reference'] = df_bodega['Reference'].fillna('').astype(str).str.strip()
+                df_bodega['Size'] = df_bodega['Size'].fillna('').astype(str).str.strip()
+                df_bodega['TotalStock'] = pd.to_numeric(df_bodega['TotalStock'], errors='coerce').fillna(0)
+                df_bodega['sku2'] = df_bodega['Reference'] + SKU2_SEP + df_bodega['Size']
+                stock_bodega = df_bodega.groupby('sku2', as_index=False)['TotalStock'].sum()
+            else:
+                stock_bodega = pd.DataFrame(columns=['sku2', 'TotalStock'])
+            stock_bodega = stock_bodega.rename(columns={'TotalStock': 'stock_bodega'})
+
+            referencias_agotadas = referencias_agotadas.merge(stock_bodega, on='sku2', how='left')
+
+            def _estado_bodega(stock):
+                if pd.isna(stock):
+                    return 'No registrado en bodega'
+                if stock > 0:
+                    return 'Con stock en bodega'
+                return 'Sin stock en bodega'
+
+            referencias_agotadas['estado_bodega'] = referencias_agotadas['stock_bodega'].apply(_estado_bodega)
+            referencias_agotadas['stock_bodega'] = referencias_agotadas['stock_bodega'].fillna(0).astype(int)
+
             # Resumen por formato para el Excel de comparación
             formato_1 = dia1.groupby('FORMATO', dropna=False).agg(
                 registros_dia1=('STOCK', 'count'),
@@ -165,7 +202,7 @@ class AgotadosCompareService:
             detalle_referencias['se_agoto'] = detalle_referencias['se_agoto'].astype(bool)
             detalle_referencias = detalle_referencias[[
                 'CODALMACEN', 'FORMATO', 'REFERENCIA', 'DESCRIPCION', 'TALLA', 'COLOR',
-                'stock_dia1', 'stock_dia2', 'se_agoto'
+                'stock_dia1', 'stock_dia2', 'se_agoto', 'stock_bodega', 'estado_bodega'
             ]]
 
             return {
@@ -243,7 +280,9 @@ class AgotadosCompareService:
             'COLOR': 'Color',
             'stock_dia1': f'Stock ({fecha_1})',
             'stock_dia2': f'Stock ({fecha_2})',
-            'se_agoto_str': 'Se Agotó'
+            'se_agoto_str': 'Se Agotó',
+            'stock_bodega': f'Stock Bodega PT100 ({fecha_1})',
+            'estado_bodega': 'Estado Bodega'
         }
         ref_copy = ref_copy.drop(columns=['se_agoto']).rename(columns=ref_cols_map)
         
@@ -341,15 +380,35 @@ class AgotadosCompareService:
                 cell.font = font_header
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 
-            # Formatear 'Se Agotó?' y estilo de filas del detalle de referencias
+            # Mapear encabezados a índice de columna (no depender de posiciones fijas)
+            headers_ref = {ws_ref.cell(row=1, column=c).value: c for c in range(1, ws_ref.max_column + 1)}
+            col_se_agoto = headers_ref.get('Se Agotó')
+            col_estado_bodega = headers_ref.get('Estado Bodega')
+            fill_gray = PatternFill("solid", fgColor="E5E7EB")  # Gris suave
+
+            # Formatear 'Se Agotó?' y 'Estado Bodega' del detalle de referencias
             for row in range(2, ws_ref.max_row + 1):
-                se_agoto_cell = ws_ref.cell(row=row, column=ws_ref.max_column)
-                if se_agoto_cell.value == 'SÍ':
-                    se_agoto_cell.fill = fill_red
-                    se_agoto_cell.font = font_red
-                else:
-                    se_agoto_cell.font = font_bold
-                se_agoto_cell.alignment = Alignment(horizontal="center")
+                if col_se_agoto:
+                    se_agoto_cell = ws_ref.cell(row=row, column=col_se_agoto)
+                    if se_agoto_cell.value == 'SÍ':
+                        se_agoto_cell.fill = fill_red
+                        se_agoto_cell.font = font_red
+                    else:
+                        se_agoto_cell.font = font_bold
+                    se_agoto_cell.alignment = Alignment(horizontal="center")
+
+                if col_estado_bodega:
+                    estado_cell = ws_ref.cell(row=row, column=col_estado_bodega)
+                    if estado_cell.value == 'Sin stock en bodega':
+                        estado_cell.fill = fill_red
+                        estado_cell.font = font_red
+                    elif estado_cell.value == 'No registrado en bodega':
+                        estado_cell.fill = fill_gray
+                        estado_cell.font = font_bold
+                    elif estado_cell.value == 'Con stock en bodega':
+                        estado_cell.fill = fill_green
+                        estado_cell.font = font_green
+                    estado_cell.alignment = Alignment(horizontal="center")
 
             # Autoajustar columnas
             for col in ws_ref.columns:

@@ -2646,11 +2646,13 @@
                       <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock <span class="compare-dia1-label">Día 1</span></th>
                       <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock <span class="compare-dia2-label">Día 2</span></th>
                       <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">¿Se Agotó?</th>
+                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Stock Bodega PT100</th>
+                      <th style="padding: 12px; border-bottom: 1px solid var(--border); text-align: center;">Estado Bodega</th>
                     </tr>
                   </thead>
                   <tbody id="compare-agotadas-table-body">
                     <tr>
-                      <td colspan="8" style="padding: 16px; text-align: center; color: var(--text-muted);">No hay SKUs que pasaron a agotado entre las fechas seleccionadas.</td>
+                      <td colspan="10" style="padding: 16px; text-align: center; color: var(--text-muted);">No hay SKUs que pasaron a agotado entre las fechas seleccionadas.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -4634,13 +4636,22 @@
       });
     }
 
+    function estadoBodegaBadgeHtml(estado, stock) {
+      let color = '#94a3b8';
+      let icon = '❔';
+      if (estado === 'Con stock en bodega') { color = '#0f766e'; icon = '✅'; }
+      else if (estado === 'Sin stock en bodega') { color = '#b91c1c'; icon = '⛔'; }
+      else if (estado === 'No registrado en bodega') { color = '#6b7280'; icon = '❔'; }
+      return `<span style="font-weight: 700; color: ${color};">${icon} ${estado || 'Sin datos'}</span>`;
+    }
+
     function renderAgotadasRefs(list) {
       const refTableBody = document.getElementById('compare-agotadas-table-body');
       refTableBody.innerHTML = '';
       if (!list.length) {
         refTableBody.innerHTML = `
           <tr>
-            <td colspan="9" style="padding: 16px; text-align: center; color: var(--text-muted);">No hay SKUs que pasaron a agotado entre las fechas seleccionadas.</td>
+            <td colspan="10" style="padding: 16px; text-align: center; color: var(--text-muted);">No hay SKUs que pasaron a agotado entre las fechas seleccionadas.</td>
           </tr>
         `;
         return;
@@ -4657,6 +4668,8 @@
           <td style="padding: 12px; text-align: center;">${row.stock_dia1 ?? ''}</td>
           <td style="padding: 12px; text-align: center;">${row.stock_dia2 ?? ''}</td>
           <td style="padding: 12px; text-align: center; font-weight: 700; color: #fda4af;">SÍ 🛑</td>
+          <td style="padding: 12px; text-align: center;">${row.stock_bodega ?? ''}</td>
+          <td style="padding: 12px; text-align: center;">${estadoBodegaBadgeHtml(row.estado_bodega, row.stock_bodega)}</td>
         `;
         refTableBody.appendChild(tr);
       });
