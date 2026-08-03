@@ -20,7 +20,7 @@ class AgotadosCompareService:
             grupos_str = "', '".join(grupos_filtro)
             # Query base con los filtros solicitados por el usuario
             query = f"""
-                SELECT CAST(FECHA AS DATE) as FECHA, REFERENCIA, DESCRIPCION, FORMATO, TALLA, COLOR, CODALMACEN, STOCK, MINIMO, CEROS
+                SELECT CAST(FECHA AS DATE) as FECHA, REFERENCIA, DESCRIPCION, FORMATO, TALLA, COLOR, CODALMACEN, STOCK, MINIMO, CEROS, TIPO_DE_PRENDA AS TIPO_PRENDA
                 FROM tblAgotados
                 WHERE CAST(FECHA AS DATE) IN ('{fecha_1}', '{fecha_2}')
                   AND GRUPO IN ('{grupos_str}')
@@ -50,10 +50,12 @@ class AgotadosCompareService:
                         "skus_agotaron": 0
                     },
                     "resumen_formatos": pd.DataFrame(),
-                    "detalle_referencias": pd.DataFrame()
+                    "detalle_referencias": pd.DataFrame(),
+                    "agotados_por_categoria_general": [],
+                    "agotados_por_categoria_formato": {}
                 }
             # Normalizar valores de columnas
-            for col in ['REFERENCIA','DESCRIPCION','FORMATO','TALLA','COLOR','CODALMACEN','ALMACEN']:
+            for col in ['REFERENCIA','DESCRIPCION','FORMATO','TALLA','COLOR','CODALMACEN','ALMACEN','TIPO_PRENDA']:
                 if col in df.columns:
                     df[col] = df[col].fillna("").astype(str).str.strip()
             df['STOCK'] = pd.to_numeric(df['STOCK'], errors='coerce').fillna(0).astype(int)
@@ -86,7 +88,7 @@ class AgotadosCompareService:
             # --- 2. Análisis por SKU ---
             # Unir por clave SKU: CODALMACEN, REFERENCIA, TALLA
             sku_cols = ['CODALMACEN','REFERENCIA','TALLA']
-            merge_cols = sku_cols + ['DESCRIPCION','FORMATO','COLOR']
+            merge_cols = sku_cols + ['DESCRIPCION','FORMATO','COLOR','TIPO_PRENDA']
             dia1_sku = dia1[merge_cols + ['STOCK','CEROS']].rename(columns={'STOCK':'stock_dia1','CEROS':'ceros_dia1'})
             dia2_sku = dia2[merge_cols + ['STOCK','CEROS']].rename(columns={'STOCK':'stock_dia2','CEROS':'ceros_dia2'})
             sku_cmp = pd.merge(dia1_sku, dia2_sku, on=merge_cols, how='outer')
@@ -134,6 +136,31 @@ class AgotadosCompareService:
 
             resumen_formatos = resumen_formatos.sort_values(by='FORMATO').reset_index(drop=True)
 
+            # SKUs que se agotaron (día1 -> día2), agrupados por categoría (TIPO_PRENDA)
+            categorias = referencias_agotadas.assign(
+                TIPO_PRENDA=referencias_agotadas['TIPO_PRENDA'].replace('', 'SIN CATEGORÍA')
+            )
+
+            agotados_por_categoria_general = (
+                categorias.groupby('TIPO_PRENDA', dropna=False)
+                          .size()
+                          .rename('count')
+                          .reset_index()
+                          .sort_values('count', ascending=False)
+                          .to_dict(orient='records')
+            )
+
+            agotados_por_categoria_formato = {}
+            for formato, grupo in categorias.groupby('FORMATO', dropna=False):
+                agotados_por_categoria_formato[formato] = (
+                    grupo.groupby('TIPO_PRENDA', dropna=False)
+                         .size()
+                         .rename('count')
+                         .reset_index()
+                         .sort_values('count', ascending=False)
+                         .to_dict(orient='records')
+                )
+
             detalle_referencias = referencias_agotadas.copy()
             detalle_referencias['se_agoto'] = detalle_referencias['se_agoto'].astype(bool)
             detalle_referencias = detalle_referencias[[
@@ -146,7 +173,9 @@ class AgotadosCompareService:
                 "referencias_agotadas": referencias_agotadas,
                 "resumen_general": resumen_general,
                 "resumen_formatos": resumen_formatos,
-                "detalle_referencias": detalle_referencias
+                "detalle_referencias": detalle_referencias,
+                "agotados_por_categoria_general": agotados_por_categoria_general,
+                "agotados_por_categoria_formato": agotados_por_categoria_formato
             }
         except Exception as e:
             print(f"Error en compare_agotados_data: {e}")
@@ -155,16 +184,41 @@ class AgotadosCompareService:
             if conn:
                 conn.close()
 
-    def generate_comparison_excel(self, df_fmt: pd.DataFrame, df_ref: pd.DataFrame, fecha_1: str, fecha_2: str) -> io.BytesIO:
+    def generate_comparison_excel(
+        self,
+        df_fmt: pd.DataFrame,
+        df_ref: pd.DataFrame,
+        fecha_1: str,
+        fecha_2: str,
+        categoria_general: list = None,
+        categoria_formato: dict = None
+    ) -> io.BytesIO:
         """
         Genera un archivo Excel premium con el análisis comparativo usando openpyxl.
         """
         output = io.BytesIO()
-        
+
         # Copias locales para no alterar originales
         fmt_copy = df_fmt.copy()
         ref_copy = df_ref.copy()
-        
+
+        # Resumen por categoría (Tipo de Prenda): general + por formato, en una sola tabla plana
+        filas_categoria = []
+        for item in (categoria_general or []):
+            filas_categoria.append({
+                'Formato': 'GENERAL (Todos)',
+                'Categoría': item['TIPO_PRENDA'],
+                'SKUs Agotados': item['count']
+            })
+        for formato, items in (categoria_formato or {}).items():
+            for item in items:
+                filas_categoria.append({
+                    'Formato': formato or 'SIN FORMATO',
+                    'Categoría': item['TIPO_PRENDA'],
+                    'SKUs Agotados': item['count']
+                })
+        cat_copy = pd.DataFrame(filas_categoria, columns=['Formato', 'Categoría', 'SKUs Agotados'])
+
         # Mapear nombres legibles de columnas para la exportación
         fmt_cols_map = {
             'FORMATO': 'Formato',
@@ -196,6 +250,7 @@ class AgotadosCompareService:
         # Escribir con Pandas
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             fmt_copy.to_excel(writer, sheet_name="Resumen por Formato", index=False)
+            cat_copy.to_excel(writer, sheet_name="Resumen por Categoría", index=False)
             ref_copy.to_excel(writer, sheet_name="Detalle de Referencias", index=False)
             
             # --- Diseño y Estilización ---
@@ -249,7 +304,33 @@ class AgotadosCompareService:
                 col_letter = get_column_letter(col[0].column)
                 ws_fmt.column_dimensions[col_letter].width = min(max_len + 4, 30)
                 
-            # Pestaña 2: Detalle de Referencias
+            # Pestaña 2: Resumen por Categoría
+            ws_cat = writer.sheets["Resumen por Categoría"]
+            ws_cat.views.sheetView[0].showGridLines = True
+
+            # Cabecera
+            for col in range(1, ws_cat.max_column + 1):
+                cell = ws_cat.cell(row=1, column=col)
+                cell.fill = fill_header
+                cell.font = font_header
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            # Resaltar las filas del resumen GENERAL para distinguirlas de las de cada formato
+            fill_general = PatternFill("solid", fgColor="DBEAFE")  # Azul suave
+            for row in range(2, ws_cat.max_row + 1):
+                formato_cell = ws_cat.cell(row=row, column=1)
+                if formato_cell.value == 'GENERAL (Todos)':
+                    for col in range(1, ws_cat.max_column + 1):
+                        ws_cat.cell(row=row, column=col).fill = fill_general
+                        ws_cat.cell(row=row, column=col).font = font_bold
+
+            # Autoajustar columnas
+            for col in ws_cat.columns:
+                max_len = max((len(str(cell.value or "")) for cell in col), default=12)
+                col_letter = get_column_letter(col[0].column)
+                ws_cat.column_dimensions[col_letter].width = min(max_len + 4, 30)
+
+            # Pestaña 3: Detalle de Referencias
             ws_ref = writer.sheets["Detalle de Referencias"]
             ws_ref.views.sheetView[0].showGridLines = True
             

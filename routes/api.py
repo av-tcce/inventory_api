@@ -1044,7 +1044,9 @@ def get_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(None)
         return {
             "referencias_agotadas": res_agotadas_dict,
             "resumen_general": res_general,
-            "resumen_formatos": res_formatos_dict
+            "resumen_formatos": res_formatos_dict,
+            "agotados_por_categoria_general": result["agotados_por_categoria_general"],
+            "agotados_por_categoria_formato": result["agotados_por_categoria_formato"]
         }
     except Exception as e:
         import traceback
@@ -1070,7 +1072,9 @@ def export_agotados_compare(fecha_1: str, fecha_2: str, formatos: str = Query(No
             result["resumen_formatos"],
             result["detalle_referencias"],
             fecha_1,
-            fecha_2
+            fecha_2,
+            result["agotados_por_categoria_general"],
+            result["agotados_por_categoria_formato"]
         )
         
         filename = f"Comparacion_Agotados_{fecha_1}_vs_{fecha_2}.xlsx"

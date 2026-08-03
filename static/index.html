@@ -2596,6 +2596,21 @@
                   <div id="compare-general-agotadas-count" class="stat-value">0</div>
                 </div>
               </div>
+
+              <div id="compare-general-categoria-section" style="display: none; margin-top: 20px;">
+                <h4 style="margin-bottom: 10px; font-size: 13px; color: var(--text-main);">SKUs Agotados por Categoría (Tipo de Prenda)</h4>
+                <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 260px;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead style="background: var(--surface); position: sticky; top: 0;">
+                      <tr>
+                        <th style="padding: 8px 10px; text-align:left; border-bottom:1px solid var(--border);">Categoría</th>
+                        <th style="padding: 8px 10px; text-align:right; border-bottom:1px solid var(--border);">SKUs Agotados</th>
+                      </tr>
+                    </thead>
+                    <tbody id="compare-general-categoria-table"></tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
             <div id="compare-formatos-section" style="display: none; margin-bottom: 32px;">
@@ -4566,7 +4581,13 @@
         status.innerHTML = '';
         results.style.display = 'block';
         renderAgotadasRefs(compareAgotadasRefsData);
-        renderResumenFormatos(Array.isArray(data.resumen_formatos) ? data.resumen_formatos : [], fecha1, fecha2);
+        renderCategoriaGeneral(Array.isArray(data.agotados_por_categoria_general) ? data.agotados_por_categoria_general : []);
+        renderResumenFormatos(
+          Array.isArray(data.resumen_formatos) ? data.resumen_formatos : [],
+          fecha1,
+          fecha2,
+          data.agotados_por_categoria_formato || {}
+        );
       } catch (err) {
         console.error(err);
         status.innerHTML = `<div class="status-msg error"><i data-lucide="x-circle"></i> Error al consultar comparación: ${err.message}</div>`;
@@ -4641,7 +4662,55 @@
       });
     }
 
-    function renderResumenFormatos(list, fecha1, fecha2) {
+    function renderCategoriaGeneral(categorias) {
+      const section = document.getElementById('compare-general-categoria-section');
+      const tbody = document.getElementById('compare-general-categoria-table');
+      tbody.innerHTML = '';
+
+      if (!categorias.length) {
+        section.style.display = 'none';
+        return;
+      }
+
+      categorias.forEach(cat => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${cat.TIPO_PRENDA}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(cat.count).toLocaleString('es-CO')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      section.style.display = 'block';
+    }
+
+    function tablaCategoriaHtml(categorias) {
+      if (!categorias || !categorias.length) {
+        return '<p style="font-size:12px; color:var(--text-muted); margin-top:14px;">No hubo SKUs que se agotaran en este formato.</p>';
+      }
+      const filas = categorias.map(cat => `
+        <tr>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${cat.TIPO_PRENDA}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(cat.count).toLocaleString('es-CO')}</td>
+        </tr>
+      `).join('');
+      return `
+        <h5 style="margin: 14px 0 8px; font-size: 12px; color: var(--text-main);">SKUs Agotados por Categoría</h5>
+        <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 220px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead style="background: var(--surface); position: sticky; top: 0;">
+              <tr>
+                <th style="padding: 6px 10px; text-align:left; border-bottom:1px solid var(--border);">Categoría</th>
+                <th style="padding: 6px 10px; text-align:right; border-bottom:1px solid var(--border);">SKUs Agotados</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderResumenFormatos(list, fecha1, fecha2, categoriaPorFormato) {
       const section = document.getElementById('compare-formatos-section');
       const container = document.getElementById('compare-formatos-container');
       container.innerHTML = '';
@@ -4654,6 +4723,7 @@
       list.forEach(row => {
         const variacion = Number(row.variacion_pct || 0);
         const variacionColor = variacion > 0 ? '#b91c1c' : variacion < 0 ? '#047857' : '';
+        const categorias = (categoriaPorFormato || {})[row.FORMATO] || [];
 
         const block = document.createElement('div');
         block.style.cssText = 'padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 16px;';
@@ -4695,6 +4765,7 @@
               <div class="stat-value">${Number(row.referencias_agotaron || 0).toLocaleString('es-CO')}</div>
             </div>
           </div>
+          ${tablaCategoriaHtml(categorias)}
         `;
         container.appendChild(block);
       });
@@ -5385,6 +5456,15 @@
       await cargarAsignacionesPlanner();
     }
 
+    function obtenerColorFilaPlanner(estado) {
+      const e = (estado || '').toLowerCase();
+      if (e.includes('cancelad')) return '#f1f1ef';
+      if (e.includes('completad')) return '#eef7ef';
+      if (e.includes('proceso') || e.includes('progreso')) return '#fdf6e3';
+      if (e.includes('pendiente')) return '#fbeeee';
+      return '';
+    }
+
     function renderTablaPlanner(rows) {
       const tbody = document.getElementById('planner-table-body');
       tbody.innerHTML = '';
@@ -5397,6 +5477,7 @@
       }
       rows.forEach(row => {
         const tr = document.createElement('tr');
+        tr.style.backgroundColor = obtenerColorFilaPlanner(row['Estado']);
         tr.innerHTML = `
           <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row.ID)}</td>
           <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha Asignacion'])}</td>
@@ -5412,7 +5493,6 @@
           <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha de cierre'])}</td>
           <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align:center; white-space:nowrap;">
             <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="editarAsignacionPlanner(${row.ID})">Editar</button>
-            <button class="btn btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="eliminarAsignacionPlanner(${row.ID})">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -5606,28 +5686,6 @@
         lucide.createIcons();
       } finally {
         btn.disabled = false;
-      }
-    }
-
-    async function eliminarAsignacionPlanner(id) {
-      if (!confirm(`¿Eliminar la asignación #${id}? Esta acción no se puede deshacer.`)) return;
-
-      const status = document.getElementById('planner-list-status');
-      try {
-        const response = await fetch(`/planner/asignaciones/${id}`, { method: 'DELETE' });
-        if (!response.ok) {
-          const message = await readErrorMessage(response);
-          throw new Error(message || 'Error al eliminar la asignación.');
-        }
-        await cargarAsignacionesPlanner();
-      } catch (err) {
-        status.innerHTML = `
-          <div class="status-msg error">
-            <i data-lucide="x-circle" style="width:24px"></i>
-            <div><strong>Error al eliminar:</strong> ${err.message}</div>
-          </div>
-        `;
-        lucide.createIcons();
       }
     }
 
