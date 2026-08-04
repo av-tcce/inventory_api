@@ -913,6 +913,11 @@
               <i data-lucide="warehouse"></i>
               Inventario de Tiendas
             </button>
+            <button type="button" class="nav-item" data-target="module-auditoria-minmax"
+              onclick="switchModule('module-auditoria-minmax', this)">
+              <i data-lucide="shield-check"></i>
+              Auditoría Mín/Máx
+            </button>
           </div>
           <button type="button" class="nav-item" data-target="module-referencias-matriculadas"
             onclick="switchModule('module-referencias-matriculadas', this)">
@@ -2194,6 +2199,92 @@
           </div>
         </section>
 
+        <section id="module-auditoria-minmax" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="shield-check"></i>
+              </div>
+              <div class="card-title">Auditoría de Máximos y Mínimos</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Audita en cuántas tiendas está matriculada cada referencia a lo largo del tiempo.
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Consulta <strong>tblAgotados</strong> filtrando siempre por <strong>MINIMO &gt; 0</strong> (matriculado). Muestra, por fecha y por formato, en cuántas tiendas distintas está matriculada cada referencia.
+              </p>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Referencias</label>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Una referencia por línea (obligatorio).</p>
+                <textarea id="am-input-referencias" class="input-field" rows="5" placeholder="Ejemplo:&#10;93123846&#10;93123847" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Desde (opcional)</label>
+                  <input type="date" id="am-input-fecha-desde" class="input-field" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha Hasta (opcional)</label>
+                  <input type="date" id="am-input-fecha-hasta" class="input-field" style="width: 100%;">
+                </div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">Formato (opcional, vacío = todos)</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="MIC" class="custom-cb"> MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="OUTLET MIC" class="custom-cb"> OUTLET MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="LITTLE MIC" class="custom-cb"> LITTLE MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="OUTLET LITTLE MIC" class="custom-cb"> OUTLET LITTLE MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="OUTLET MOVIES" class="custom-cb"> OUTLET MOVIES</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="am-formato" value="MOVIES-W" class="custom-cb"> MOVIES-W</label>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-am-consultar" onclick="consultarAuditoriaMinMax()" style="min-width: 180px; height: 44px;">
+                  <i data-lucide="search" style="width: 18px"></i>
+                  Consultar
+                </button>
+                <button class="btn btn-secondary" id="btn-am-exportar" onclick="exportarAuditoriaMinMax()" style="min-width: 180px; height: 44px;">
+                  <i data-lucide="download" style="width: 18px"></i>
+                  Exportar Excel
+                </button>
+              </div>
+              <div id="am-status" style="margin-top: 20px;"></div>
+            </div>
+
+            <div id="am-results" style="display: none;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 16px; font-weight: 600; color: var(--text-main); margin: 0;">Resultado</h3>
+                <span id="am-results-count" style="font-size: 12px; color: var(--text-muted);"></span>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 500px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead style="background: var(--surface); position: sticky; top: 0;">
+                    <tr>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Fecha</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Formato</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Referencia</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Descripción</th>
+                      <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Tiendas Matriculadas</th>
+                    </tr>
+                  </thead>
+                  <tbody id="am-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="module-referencias-matriculadas" class="module-panel">
           <div class="card stagger-1">
             <div class="card-step">01</div>
@@ -3104,7 +3195,13 @@
               <div class="card-title">Gráficos del Planner</div>
             </div>
 
-            <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-bottom:16px; flex-wrap: wrap;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <label for="planner-graficos-filtro-responsable" style="font-size:12px; color: var(--text-secondary);">Responsable</label>
+                <select id="planner-graficos-filtro-responsable" class="input-field" style="min-width: 200px;" onchange="cargarGraficosPlanner()">
+                  <option value="">Todos</option>
+                </select>
+              </div>
               <button class="btn btn-outline" onclick="cargarGraficosPlanner()" style="font-size: 12px; padding: 6px 12px;">
                 <i data-lucide="refresh-cw" style="width: 14px; margin-right: 4px;"></i>
                 Actualizar
@@ -4155,6 +4252,10 @@
         case 'module-inv-tiendas':
           titleTxt = "Inventario de Tiendas";
           descTxt = "Consulta y descarga del inventario de tiendas (inv_tiendas) relacionado con Parametrización y Maestra de Almacenes.";
+          break;
+        case 'module-auditoria-minmax':
+          titleTxt = "Auditoría de Máximos y Mínimos";
+          descTxt = "Audita en cuántas tiendas está matriculada cada referencia, por fecha y por formato.";
           break;
         case 'module-agotados':
           titleTxt = "Buscador de Agotados";
@@ -5280,6 +5381,112 @@
       window.location.href = `/inv-tiendas/export?${params.toString()}`;
     }
 
+    /* ── Auditoría de Máximos y Mínimos Logic ── */
+    function leerFiltrosAuditoriaMinMax() {
+      const referencias = document.getElementById('am-input-referencias').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+      const fechaDesde = document.getElementById('am-input-fecha-desde').value;
+      const fechaHasta = document.getElementById('am-input-fecha-hasta').value;
+      const formatos = Array.from(document.querySelectorAll('input[name="am-formato"]:checked')).map(cb => cb.value);
+      return { referencias, fechaDesde, fechaHasta, formatos };
+    }
+
+    function buildParamsAuditoriaMinMax({ referencias, fechaDesde, fechaHasta, formatos }) {
+      const params = new URLSearchParams();
+      referencias.forEach(r => params.append('referencia', r));
+      if (fechaDesde) params.append('fecha_desde', fechaDesde);
+      if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+      formatos.forEach(f => params.append('formato', f));
+      return params;
+    }
+
+    async function consultarAuditoriaMinMax() {
+      const btn = document.getElementById('btn-am-consultar');
+      const status = document.getElementById('am-status');
+      const results = document.getElementById('am-results');
+      const filtros = leerFiltrosAuditoriaMinMax();
+
+      if (filtros.referencias.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe ingresar al menos una referencia.</strong></div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Consultando auditoría...</div>';
+      results.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const params = buildParamsAuditoriaMinMax(filtros);
+        const response = await fetch(`/auditoria-min-max?${params.toString()}`);
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al consultar la auditoría.');
+        }
+
+        const data = await response.json();
+
+        const tbody = document.getElementById('am-table-body');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="padding:16px; text-align:center; color:var(--text-muted);">No se encontraron registros para los filtros seleccionados.</td></tr>';
+        } else {
+          data.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.FECHA)}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.FORMATO)}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.REFERENCIA)}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.DESCRIPCION)}</td>
+              <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(row.TIENDAS_MATRICULADAS).toLocaleString('es-CO')}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        document.getElementById('am-results-count').textContent = `${data.length.toLocaleString('es-CO')} registros`;
+        results.style.display = 'block';
+        status.innerHTML = '';
+        lucide.createIcons();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al consultar la auditoría:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function exportarAuditoriaMinMax() {
+      const status = document.getElementById('am-status');
+      const filtros = leerFiltrosAuditoriaMinMax();
+
+      if (filtros.referencias.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe ingresar al menos una referencia para exportar.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const params = buildParamsAuditoriaMinMax(filtros);
+      window.location.href = `/auditoria-min-max/export?${params.toString()}`;
+    }
+
     /* ── Planner de Asignaciones Logic ── */
     let plannerDropdownsLoaded = false;
     let plannerData = [];
@@ -5290,7 +5497,7 @@
     let plannerChartResponsable = null;
     let plannerChartCumplimiento = null;
 
-    function escapeHtmlPlanner(value) {
+    function escapeHtml(value) {
       const div = document.createElement('div');
       div.textContent = value ?? '';
       return div.innerHTML;
@@ -5372,6 +5579,17 @@
         selectResponsable.appendChild(opt);
       });
 
+      const selectGraficosResponsable = document.getElementById('planner-graficos-filtro-responsable');
+      const valorPrevio = selectGraficosResponsable.value;
+      selectGraficosResponsable.innerHTML = '<option value="">Todos</option>';
+      plannerUsuariosCache.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u;
+        opt.textContent = u;
+        selectGraficosResponsable.appendChild(opt);
+      });
+      selectGraficosResponsable.value = valorPrevio;
+
       const selectPrioridad = document.getElementById('planner-filtro-prioridad');
       selectPrioridad.innerHTML = '<option value="">Todas</option>';
       plannerPrioridadesCache.forEach(p => {
@@ -5387,7 +5605,7 @@
         const label = document.createElement('label');
         label.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;';
         const checked = esEstadoPredeterminadoPlanner(estado) ? 'checked' : '';
-        label.innerHTML = `<input type="checkbox" value="${escapeHtmlPlanner(estado)}" ${checked} onchange="aplicarFiltrosPlannerGestion()"> ${escapeHtmlPlanner(estado)}`;
+        label.innerHTML = `<input type="checkbox" value="${escapeHtml(estado)}" ${checked} onchange="aplicarFiltrosPlannerGestion()"> ${escapeHtml(estado)}`;
         contenedorEstados.appendChild(label);
       });
     }
@@ -5492,18 +5710,18 @@
         const tr = document.createElement('tr');
         tr.style.backgroundColor = obtenerColorFilaPlanner(row['Estado']);
         tr.innerHTML = `
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row.ID)}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha Asignacion'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Usuario que asigna'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Actividad'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Prioridad'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Estado'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Usuario Responsable Asignado'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtmlPlanner(row['Descripción / Qué hacer'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtmlPlanner(row['Notas'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha Updated'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha limite de entrega'])}</td>
-          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtmlPlanner(row['Fecha de cierre'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row.ID)}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Fecha Asignacion'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Usuario que asigna'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Actividad'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Prioridad'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Estado'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Usuario Responsable Asignado'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtml(row['Descripción / Qué hacer'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border); max-width:200px; white-space:normal;">${escapeHtml(row['Notas'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Fecha Updated'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Fecha limite de entrega'])}</td>
+          <td style="padding: 8px; border-bottom: 1px solid var(--border);">${escapeHtml(row['Fecha de cierre'])}</td>
           <td style="padding: 8px; border-bottom: 1px solid var(--border); text-align:center; white-space:nowrap;">
             <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="editarAsignacionPlanner(${row.ID})">Editar</button>
           </td>
@@ -5711,7 +5929,14 @@
       lucide.createIcons();
 
       try {
-        const response = await fetch('/planner/reporte');
+        await cargarDropdownsPlanner();
+
+        const responsable = document.getElementById('planner-graficos-filtro-responsable').value;
+        const url = responsable
+          ? `/planner/reporte?responsable=${encodeURIComponent(responsable)}`
+          : '/planner/reporte';
+
+        const response = await fetch(url);
         if (!response.ok) {
           const message = await readErrorMessage(response);
           throw new Error(message || 'Error al obtener el reporte.');
@@ -5729,7 +5954,7 @@
           const div = document.createElement('div');
           div.className = 'stat-card-relief';
           div.innerHTML = `
-            <div class="stat-label">${escapeHtmlPlanner(item.Estado)}</div>
+            <div class="stat-label">${escapeHtml(item.Estado)}</div>
             <div class="stat-value" style="font-size:20px;">${Number(item.count).toLocaleString('es-CO')}</div>
           `;
           porEstadoContainer.appendChild(div);

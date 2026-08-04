@@ -145,10 +145,14 @@ def _parse_fecha(value):
     return parsed.date()
 
 
-def obtener_reporte() -> dict:
+def obtener_reporte(responsable: str = None) -> dict:
     """Resumen para el submódulo de Gráficos: totales, por estado, por responsable y cumplimiento de fechas."""
     df = _read_sheet(SHEET_ASIGNACIONES)
     df = df.fillna("")
+
+    responsable = (responsable or "").strip()
+    if responsable:
+        df = df[df["Usuario Responsable Asignado"].astype(str).str.strip() == responsable]
 
     total_registros = int(len(df))
 

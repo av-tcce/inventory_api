@@ -11,6 +11,7 @@ from services.unit_request_service import generate_unit_request
 from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia
 from services.inv_tiendas_service import resumen_inventario_tiendas, exportar_inventario_tiendas
 from services import planner_service
+from services import auditoria_min_max_service
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
@@ -556,12 +557,50 @@ def get_planner_estados():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error consultando estados: {str(e)}")
 
 @router.get("/planner/reporte", tags=["Planner"])
-def get_planner_reporte():
+def get_planner_reporte(
+    responsable: str = Query(None, description="Filtra el reporte por Usuario Responsable Asignado")
+):
     """Resumen para el submódulo de Gráficos: totales, por estado, por responsable y cumplimiento de fechas."""
     try:
-        return planner_service.obtener_reporte()
+        return planner_service.obtener_reporte(responsable=responsable)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando reporte: {str(e)}")
+
+@router.get("/auditoria-min-max", tags=["Reportes y Análisis"])
+def get_auditoria_min_max(
+    referencia: List[str] = Query(..., description="Una o varias referencias a auditar"),
+    fecha_desde: str = Query(None, description="Fecha desde (YYYY-MM-DD)"),
+    fecha_hasta: str = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
+    formato: List[str] = Query(None, description="Uno o varios formatos a filtrar")
+):
+    """Audita en cuántas tiendas está matriculada (MINIMO > 0) cada referencia, por fecha y formato."""
+    try:
+        return auditoria_min_max_service.consultar_auditoria_min_max(referencia, fecha_desde, fecha_hasta, formato)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error en la auditoría: {str(e)}")
+
+@router.get("/auditoria-min-max/export", tags=["Reportes y Análisis"])
+def export_auditoria_min_max(
+    referencia: List[str] = Query(..., description="Una o varias referencias a auditar"),
+    fecha_desde: str = Query(None, description="Fecha desde (YYYY-MM-DD)"),
+    fecha_hasta: str = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
+    formato: List[str] = Query(None, description="Uno o varios formatos a filtrar")
+):
+    """Exporta a Excel la auditoría de máximos y mínimos."""
+    try:
+        output = auditoria_min_max_service.exportar_auditoria_min_max(referencia, fecha_desde, fecha_hasta, formato)
+        filename = "auditoria_min_max.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando auditoría: {str(e)}")
 
 @router.post("/sabana-outlet/generate", tags=["Sabana Outlet"])
 async def generate_sabana_outlet_endpoint(
