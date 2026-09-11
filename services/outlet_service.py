@@ -162,7 +162,7 @@ def generate_sabana_outlet(tc_content: bytes):
 
     # Tiendas Master y Segmentación
     df = pd.merge(df, df_tiendas_master, left_on='ID', right_on='EQ_COD2', how='left')
-    df['ORDEN'] = df['RANK_VTA'].fillna(999).astype(int)
+    df['ORDEN'] = pd.to_numeric(df['RANK_VTA'], errors='coerce').fillna(999).astype(int)
     df['ORDEN'] = np.where(df['ID']=="CO571", 1, df['ORDEN'])
 
     df_matriz = pd.read_excel(RUTA_MATRIZ, sheet_name='Matriz', header=0)

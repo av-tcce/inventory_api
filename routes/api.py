@@ -12,6 +12,9 @@ from services.solicitud_unidades_service import consultar_solicitud_unidades, ge
 from services.inv_tiendas_service import resumen_inventario_tiendas, exportar_inventario_tiendas
 from services import planner_service
 from services import auditoria_min_max_service
+from services import tallaje_matriculado_service
+from services import validacion_pedidos_service
+from services.generador_solicitud_service import generar_estructura_solicitud
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
@@ -409,6 +412,35 @@ async def generate_unit_request_endpoint(
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error generando Solicitud de Unidades: {str(e)}")
 
+@router.post("/generador-solicitud/generate", tags=["Solicitud de Unidades"])
+async def generate_estructura_solicitud_endpoint(
+    referencias: UploadFile = File(..., description="Excel con las referencias nuevas (REFERENCIA, GENERO, LICENCIA, TIPO PRENDA, SILUETA, ESTRATEGIA, ...)")
+):
+    """
+    Genera el archivo con la estructura de la hoja DETALLE (una fila por talla matriculada de
+    cada combinación Género + Tipo de Prenda) para luego subirlo al módulo de Solicitud de Unidades.
+    Las columnas de cantidad por tienda (AA/A/B/C) y MUEBLE quedan en blanco para completarse manualmente.
+    """
+    if not (referencias.filename.endswith('.xlsx') or referencias.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel.")
+
+    try:
+        contenido = await referencias.read()
+        output = generar_estructura_solicitud(contenido)
+
+        fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+        filename = f"estructura_solicitud_{fecha_hoy}.xlsx"
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando la estructura de solicitud: {str(e)}")
+
 @router.get("/unit-request/query", tags=["Solicitud de Unidades"])
 def query_unit_request(cdcdgo: List[str] = Query(..., description="Una o varias referencias CDCDGO a buscar")):
     """Consulta la tabla tblSolicitudUnidades por una o varias referencias CDCDGO."""
@@ -602,6 +634,55 @@ def export_auditoria_min_max(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando auditoría: {str(e)}")
 
+@router.get("/tallaje-matriculado/dataset", tags=["Reportes y Análisis"])
+def get_dataset_tallaje_matriculado(
+    fecha: str = Query(None, description="Fecha exacta a consultar (YYYY-MM-DD). Si no se indica, se busca la más reciente disponible (más lento).")
+):
+    """
+    Carga todo lo matriculado (MINIMO > 0) de una fecha (server-side cacheado por fecha) para que
+    el cliente filtre por Tipo de Prenda/Formato/Género/Referencia en el navegador sin volver a consultar.
+    """
+    try:
+        return tallaje_matriculado_service.get_dataset_tallaje(fecha)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error cargando el dataset de tallaje matriculado: {str(e)}")
+
+@router.get("/validacion-pedidos", tags=["Validación de Pedidos"])
+def get_validacion_pedidos(
+    referencia: List[str] = Query(..., description="Una o varias referencias (CDCDGO) a validar")
+):
+    """
+    Para una o varias referencias, valida por Formato en cuántas tiendas activas (Maestra_Almacenes)
+    ya existe un registro en tblSolicitudUnidades y en cuántas falta.
+    """
+    try:
+        return validacion_pedidos_service.validar_pedidos(referencia)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error validando pedidos: {str(e)}")
+
+@router.get("/validacion-pedidos/export", tags=["Validación de Pedidos"])
+def export_validacion_pedidos(
+    referencia: List[str] = Query(..., description="Una o varias referencias (CDCDGO) a validar")
+):
+    """Exporta a Excel (Resumen + Detalle) la validación de pedidos para una o varias referencias."""
+    try:
+        data = validacion_pedidos_service.validar_pedidos(referencia)
+        output = validacion_pedidos_service.generar_excel_validacion(data)
+        filename = f"Validacion_Pedidos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error exportando validación de pedidos: {str(e)}")
+
 @router.post("/sabana-outlet/generate", tags=["Sabana Outlet"])
 async def generate_sabana_outlet_endpoint(
     tc_inventario: UploadFile = File(..., description="Archivo Excel TC INVENTARIO (Hojas Cargue y Requerido)")
@@ -748,18 +829,21 @@ def export_agotados(fecha: str, formatos: str = None, grupos: str = None, tipo: 
 
 
 @router.get("/clasificacion/report", tags=["Clasificación"])
-def get_clasificacion_report(fecha: str, referencia: str = None):
+def get_clasificacion_report(
+    fecha: str,
+    referencia: List[str] = Query(None, description="Una o varias referencias (CodRef) a buscar. Si no se indica ninguna, se traen todas.")
+):
     """
     Retorna los datos de clasificación y estadísticas para la última carga de la semana de la fecha.
     """
     try:
         df, stats = get_clasificacion_data(fecha, referencia)
-        
+
         # Convertimos fechas a string para JSON si existen
         for col in df.columns:
             if pd.api.types.is_datetime64_any_dtype(df[col]):
                 df[col] = df[col].astype(str)
-                
+
         return {
             "total": stats.get("total", 0),
             "stats": stats,
@@ -770,23 +854,27 @@ def get_clasificacion_report(fecha: str, referencia: str = None):
 
 
 @router.get("/clasificacion/export", tags=["Clasificación"])
-def export_clasificacion(fecha: str, referencia: str = None):
+def export_clasificacion(
+    fecha: str,
+    referencia: List[str] = Query(None, description="Una o varias referencias (CodRef) a exportar. Si no se indica ninguna, se exportan todas.")
+):
     """
-    Genera y descarga el archivo Excel completo de clasificación (semana/referencia).
+    Genera y descarga el archivo Excel completo de clasificación (semana/referencias, o todas si no se indican).
     """
     try:
         df, stats = get_clasificacion_data(fecha, referencia)
         if df.empty:
             raise HTTPException(status_code=404, detail="No se encontraron datos para los filtros seleccionados.")
-            
+
         output = generate_clasificacion_excel(df)
-        
+
         # Usar la fecha real de carga encontrada si es posible
         display_date = stats.get("ultima_fecha_semana", fecha)
         filename = f"Clasificacion_{display_date}.xlsx"
         if referencia:
-            filename = f"Clasificacion_{display_date}_{referencia}.xlsx"
-            
+            sufijo = "_".join(referencia) if len(referencia) <= 3 else f"{len(referencia)}_referencias"
+            filename = f"Clasificacion_{display_date}_{sufijo}.xlsx"
+
         headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
         return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
     except Exception as e:

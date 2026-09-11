@@ -105,7 +105,7 @@ def generate_unit_request(
         return row[row['TOP PDV']]
 
     df3['UNIDADES'] = df3.apply(get_value, axis=1)
-    df3['UNIDADES'] = np.where(df3['CANAL'] == 'APERTURASC', df3['UNIDADES'] * 5, df3['UNIDADES'])
+    df3['UNIDADES'] = np.where(df3['CANAL'] == 'APERTURASC', df3['UNIDADES'] * 3, df3['UNIDADES'])
 
     df3 = pd.merge(df3, df4, on='GENERO_TIENDA', how='left')
 

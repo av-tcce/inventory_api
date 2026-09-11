@@ -204,14 +204,14 @@
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       background: rgba(59, 130, 246, 0.1);
       border: 1px solid rgba(59, 130, 246, 0.2);
-      padding: 6px 14px;
+      padding: 10px 20px;
       border-radius: 99px;
       color: var(--primary);
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: 700;
       margin-bottom: 20px;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -568,6 +568,37 @@
       border-color: var(--secondary);
     }
 
+    .filter-card-header-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-clear-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 999px;
+      padding: 0;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .filter-clear-btn:hover {
+      color: var(--secondary);
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    .filter-clear-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+
     .filter-search-wrap {
       position: relative;
       margin-bottom: 8px;
@@ -888,6 +919,11 @@
               <i data-lucide="layers"></i>
               Resumen Solicitud Unidades
             </button>
+            <button type="button" class="nav-item" data-target="module-validacion-pedidos"
+              onclick="switchModule('module-validacion-pedidos', this)">
+              <i data-lucide="check-square"></i>
+              Validación de Pedidos
+            </button>
             <button type="button" class="nav-item" data-target="module-clasificacion"
               onclick="switchModule('module-clasificacion', this)">
               <i data-lucide="tag"></i>
@@ -918,6 +954,11 @@
               <i data-lucide="shield-check"></i>
               Auditoría Mín/Máx
             </button>
+            <button type="button" class="nav-item" data-target="module-tallaje-matriculado"
+              onclick="switchModule('module-tallaje-matriculado', this)">
+              <i data-lucide="ruler"></i>
+              Tallaje Matriculado
+            </button>
           </div>
           <button type="button" class="nav-item" data-target="module-referencias-matriculadas"
             onclick="switchModule('module-referencias-matriculadas', this)">
@@ -928,6 +969,11 @@
             onclick="switchModule('module-sabana', this)">
             <i data-lucide="database"></i>
             Consolidado Sabana MTO
+          </button>
+          <button type="button" class="nav-item" data-target="module-generador-solicitud"
+            onclick="switchModule('module-generador-solicitud', this)">
+            <i data-lucide="file-plus-2"></i>
+            Generador de Estructura
           </button>
           <button type="button" class="nav-item" data-target="module-solicitud-unidades"
             onclick="switchModule('module-solicitud-unidades', this)">
@@ -989,8 +1035,8 @@
       <div class="page-content">
         <header>
           <div class="badge">
-            <i data-lucide="sparkles" style="width:14px"></i>
-            AI Inventory Engine
+            <i data-lucide="sparkles" style="width:18px"></i>
+            Procesos Automatizados de Inteligencia de Negocios
           </div>
           <h1 id="page-title">Optimiza tu Distribución</h1>
           <p id="page-description">Algoritmo dinámico para redistribuir existencias de tiendas en cierre con precisión
@@ -1385,6 +1431,53 @@
             </button>
 
             <div id="sabana-status" style="margin-top: 20px;"></div>
+          </div>
+        </section>
+
+        <section id="module-generador-solicitud" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--accent), var(--secondary))">
+                <i data-lucide="file-plus-2"></i>
+              </div>
+              <div class="card-title">Generador de Estructura (Solicitud)</div>
+            </div>
+
+            <div
+              style="background: rgba(124, 58, 237, 0.03); border: 1px solid rgba(124, 58, 237, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--accent); margin-right:4px;"></i>
+                Paso previo a Solicitud de Unidades
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 12px;">
+                Sube un Excel de referencias nuevas (columnas <strong>REFERENCIA, GENERO, LICENCIA, TIPO PRENDA, SILUETA, ESTRATEGIA</strong>)
+                y este módulo genera la hoja <strong>DETALLE</strong> que espera el módulo de Solicitud de Unidades: una fila
+                por cada <strong>talla matriculada</strong> según la combinación Género + Tipo de Prenda.
+              </p>
+              <ul style="color:var(--text-muted); font-size: 12px; padding-left: 18px; line-height: 1.4;">
+                <li>El tallaje se busca en tblAgotados (mismo dato que el módulo Tallaje Matriculado), fecha más reciente.</li>
+                <li>Las columnas de cantidad por tienda (AA/A/B/C) y MUEBLE quedan en blanco para diligenciarlas manualmente.</li>
+                <li>Si alguna referencia no tiene tallaje matriculado para su Género + Tipo de Prenda, queda listada en la hoja "Sin_Tallaje" del archivo generado, en vez de perderse en silencio.</li>
+                <li>El archivo resultante queda listo para subirse tal cual al módulo <strong>Solicitud de Unidades</strong> (hoja DETALLE), una vez completes las cantidades.</li>
+              </ul>
+            </div>
+
+            <div class="drop-zone" id="dz-generador-solicitud"
+              onclick="document.getElementById('input-generador-solicitud').click()" style="margin-bottom: 32px;">
+              <input type="file" id="input-generador-solicitud" hidden onchange="updateGeneradorSolicitudLabel(this)" />
+              <i data-lucide="file-spreadsheet"></i>
+              <h4 id="label-generador-solicitud">Seleccionar Archivo de Referencias Nuevas</h4>
+              <p style="font-size:11px; margin-top:4px;">Requerido. Debe contener REFERENCIA, GENERO, LICENCIA, TIPO PRENDA, SILUETA, ESTRATEGIA.</p>
+            </div>
+
+            <button class="btn btn-primary" id="btn-generador-solicitud" onclick="generarEstructuraSolicitud()"
+              style="width: 100%; height: 60px;" disabled>
+              <div class="loader" id="loader-generador-solicitud"></div>
+              <div id="text-generador-solicitud">Generar Estructura</div>
+            </button>
+
+            <div id="generador-solicitud-status" style="margin-top: 20px;"></div>
           </div>
         </section>
 
@@ -2285,6 +2378,282 @@
           </div>
         </section>
 
+        <section id="module-tallaje-matriculado" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="ruler"></i>
+              </div>
+              <div class="card-title">Tallaje Matriculado</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Tallaje matriculado por Tipo de Prenda, Formato y Género
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Consulta <strong>tblAgotados</strong> (siempre con la fecha más reciente disponible) filtrando por <strong>MINIMO &gt; 0</strong> (matriculado)
+                y muestra qué tallas existen matriculadas para la combinación seleccionada. La Referencia es un filtro adicional opcional.
+              </p>
+            </div>
+
+            <div id="tm-status" style="margin-bottom: 16px;"></div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: end; margin-bottom: 12px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha a cargar (opcional)</label>
+                  <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Si la indicas, se carga directamente esa fecha (más rápido). Si la dejas vacía, se busca la más reciente disponible (más lento). Este paso consulta la base de datos una sola vez.</p>
+                  <input type="date" id="tm-input-fecha" class="input-field" style="width: 100%;">
+                </div>
+                <button class="btn btn-secondary" id="btn-tm-cargar" onclick="cargarDatasetTallaje()" style="height: 44px;">
+                  <i data-lucide="download-cloud" style="width: 18px"></i>
+                  Cargar Datos
+                </button>
+              </div>
+              <div id="tm-dataset-info" style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Aún no se han cargado datos. Presiona "Cargar Datos" para empezar.</div>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="margin-bottom: 20px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">Tipo de Prenda (obligatorio)</label>
+                <div id="tm-filtro-tipo-prenda" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; padding: 4px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="ACCESORIO" class="custom-cb"> ACCESORIO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BAÑO" class="custom-cb"> BAÑO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BERMUDA" class="custom-cb"> BERMUDA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BODY" class="custom-cb"> BODY</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BOLSA" class="custom-cb"> BOLSA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BONO" class="custom-cb"> BONO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BOTELLA" class="custom-cb"> BOTELLA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BOXER" class="custom-cb"> BOXER</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="BUZO" class="custom-cb"> BUZO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="CALCETIN" class="custom-cb"> CALCETIN</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="CALZADO" class="custom-cb"> CALZADO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="CAMISETA" class="custom-cb"> CAMISETA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="CHAQUETA" class="custom-cb"> CHAQUETA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="CONJUNTO" class="custom-cb"> CONJUNTO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="FALDA" class="custom-cb"> FALDA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="GAFA" class="custom-cb"> GAFA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="GORRA" class="custom-cb"> GORRA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="JEAN" class="custom-cb"> JEAN</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="JOGGER" class="custom-cb"> JOGGER</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="LEGGING" class="custom-cb"> LEGGING</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="LONCHERA" class="custom-cb"> LONCHERA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="MORRALES Y OTROS" class="custom-cb"> MORRALES Y OTROS</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="OVEROL" class="custom-cb"> OVEROL</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="PANTALON" class="custom-cb"> PANTALON</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="PANTY" class="custom-cb"> PANTY</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="PIJAMA" class="custom-cb"> PIJAMA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="POLO" class="custom-cb"> POLO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="POP" class="custom-cb"> POP</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="SET PRIMER DIA" class="custom-cb"> SET PRIMER DIA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="SHORT" class="custom-cb"> SHORT</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="TOP" class="custom-cb"> TOP</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-tipo-prenda" value="VESTIDO" class="custom-cb"> VESTIDO</label>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">Formato (obligatorio)</label>
+                <div id="tm-filtro-formato" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="LITTLE MIC" class="custom-cb"> LITTLE MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="LITTLE MIC ECUADOR" class="custom-cb"> LITTLE MIC ECUADOR</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="LITTLE MIC GUATEMALA" class="custom-cb"> LITTLE MIC GUATEMALA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="LITTLE MIC PANAMA" class="custom-cb"> LITTLE MIC PANAMA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MIC" class="custom-cb"> MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MIC CHILE" class="custom-cb"> MIC CHILE</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MIC ECUADOR" class="custom-cb"> MIC ECUADOR</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MIC GUATEMALA" class="custom-cb"> MIC GUATEMALA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MIC PANAMA" class="custom-cb"> MIC PANAMA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MOVIES-W" class="custom-cb"> MOVIES-W</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MOVIES-W CHILE" class="custom-cb"> MOVIES-W CHILE</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MOVIES-W ECUADOR" class="custom-cb"> MOVIES-W ECUADOR</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MOVIES-W GUATEMALA" class="custom-cb"> MOVIES-W GUATEMALA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="MOVIES-W PANAMA" class="custom-cb"> MOVIES-W PANAMA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET LITTLE MIC" class="custom-cb"> OUTLET LITTLE MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET MIC" class="custom-cb"> OUTLET MIC</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET MIC ECUADOR" class="custom-cb"> OUTLET MIC ECUADOR</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET MIC GUATEMALA" class="custom-cb"> OUTLET MIC GUATEMALA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET MIC PANAMA" class="custom-cb"> OUTLET MIC PANAMA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-formato" value="OUTLET MOVIES" class="custom-cb"> OUTLET MOVIES</label>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 8px;">Género (obligatorio)</label>
+                <div id="tm-filtro-genero" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="ADULTO UNISEX" class="custom-cb"> ADULTO UNISEX</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="BEBE NIÑA" class="custom-cb"> BEBE NIÑA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="BEBE NIÑO" class="custom-cb"> BEBE NIÑO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="CAMINADOR NIÑA" class="custom-cb"> CAMINADOR NIÑA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="CAMINADOR NIÑO" class="custom-cb"> CAMINADOR NIÑO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="HOMBRE" class="custom-cb"> HOMBRE</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="MUJER" class="custom-cb"> MUJER</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="NIÑA" class="custom-cb"> NIÑA</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="NIÑO" class="custom-cb"> NIÑO</label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor:pointer;"><input type="checkbox" name="tm-genero" value="NIÑO UNISEX" class="custom-cb"> NIÑO UNISEX</label>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Referencia (opcional)</label>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Una referencia por línea. Déjalo vacío para incluir todas las referencias que cumplan los filtros de arriba.</p>
+                <textarea id="tm-input-referencias" class="input-field" rows="3" placeholder="Ejemplo:&#10;93123846&#10;93123847" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
+              </div>
+
+              <button class="btn btn-primary" id="btn-tm-consultar" onclick="consultarTallajeMatriculado()" style="min-width: 220px; height: 44px;" disabled>
+                <i data-lucide="search" style="width: 18px"></i>
+                Consultar Tallaje
+              </button>
+            </div>
+
+            <div id="tm-results" style="display: none;">
+              <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                <div class="stat-card-relief" style="min-width: 160px;">
+                  <div class="stat-label">Fecha consultada</div>
+                  <div id="tm-kpi-fecha" class="stat-value" style="font-size: 18px;">-</div>
+                </div>
+                <div class="stat-card-relief" style="min-width: 140px;">
+                  <div class="stat-label">Tallas distintas</div>
+                  <div id="tm-kpi-tallas" class="stat-value">0</div>
+                </div>
+                <div class="stat-card-relief" style="min-width: 140px;">
+                  <div class="stat-label">Referencias</div>
+                  <div id="tm-kpi-referencias" class="stat-value">0</div>
+                </div>
+                <div class="stat-card-relief" style="min-width: 140px;">
+                  <div class="stat-label">Tiendas</div>
+                  <div id="tm-kpi-tiendas" class="stat-value">0</div>
+                </div>
+              </div>
+
+              <div id="tm-tallas-chips" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;"></div>
+
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 420px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <thead style="background: var(--surface); position: sticky; top: 0;">
+                    <tr>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Talla</th>
+                      <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Referencias</th>
+                      <th style="padding: 10px; text-align:right; border-bottom:1px solid var(--border);">Tiendas Matriculadas</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tm-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="module-validacion-pedidos" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="check-square"></i>
+              </div>
+              <div class="card-title">Validación de Pedidos</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Cobertura de referencias en tblSolicitudUnidades
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Para cada referencia, valida por <strong>Formato</strong> en cuántas tiendas <strong>activas</strong> (Maestra_Almacenes)
+                ya existe un registro en <strong>tblSolicitudUnidades</strong> y en cuántas falta.
+              </p>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="margin-bottom: 16px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Referencias (obligatorio)</label>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Una referencia (CDCDGO) por línea.</p>
+                <textarea id="vp-input-referencias" class="input-field" rows="5" placeholder="Ejemplo:&#10;93123846&#10;93123847" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
+              </div>
+
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="btn-vp-validar" onclick="validarPedidos()" style="min-width: 200px; height: 44px;">
+                  <i data-lucide="search" style="width: 18px"></i>
+                  Validar Pedidos
+                </button>
+                <button class="btn btn-secondary" id="btn-vp-exportar" onclick="exportarValidacionPedidos()" style="min-width: 180px; height: 44px;">
+                  <i data-lucide="download" style="width: 18px"></i>
+                  Descargar Excel
+                </button>
+              </div>
+              <div id="vp-status" style="margin-top: 20px;"></div>
+            </div>
+
+            <div id="vp-results" style="display: none;">
+              <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+                <div class="stat-card-relief" style="min-width: 160px;">
+                  <div class="stat-label">Referencias</div>
+                  <div id="vp-kpi-referencias" class="stat-value">0</div>
+                </div>
+                <div class="stat-card-relief" style="min-width: 160px;">
+                  <div class="stat-label">Formatos evaluados</div>
+                  <div id="vp-kpi-formatos" class="stat-value">0</div>
+                </div>
+              </div>
+
+              <div class="settings-panel" style="margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+                  <div>
+                    <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Buscar Referencia</label>
+                    <div style="position: relative;">
+                      <i data-lucide="search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--text-muted); pointer-events:none;"></i>
+                      <input type="text" id="vp-filtro-referencia" class="input-field" style="width: 100%; padding-left: 32px;" placeholder="Filtrar por referencia..." oninput="aplicarFiltrosResultadoValidacion()">
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Filtrar por Formato</label>
+                    <div id="vp-filtro-formato" style="display: flex; flex-wrap: wrap; gap: 6px 16px;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <h4 style="margin-bottom: 12px; font-size: 14px;">Resumen por Formato (con desglose por Top de Venta y Clima)</h4>
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 420px; margin-bottom: 24px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <thead style="background: var(--surface); position: sticky; top: 0;">
+                    <tr id="vp-resumen-head-row"></tr>
+                  </thead>
+                  <tbody id="vp-resumen-body"></tbody>
+                </table>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="font-size: 14px; margin: 0;">Detalle por Tienda</h4>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="vp-solo-faltantes" class="custom-cb" onchange="renderDetalleValidacionPedidos()">
+                  Mostrar solo tiendas sin la referencia
+                </label>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 500px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead style="background: var(--surface); position: sticky; top: 0;">
+                    <tr>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Referencia</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Segmentación</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Formato</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Top Venta</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Clima</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Código</th>
+                      <th style="padding: 10px; text-align:left; border-bottom:1px solid var(--border);">Tienda</th>
+                      <th style="padding: 10px; text-align:center; border-bottom:1px solid var(--border);">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vp-detalle-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="module-referencias-matriculadas" class="module-panel">
           <div class="card stagger-1">
             <div class="card-step">01</div>
@@ -2793,14 +3162,14 @@
 
                 <div class="setting-group">
                   <div class="setting-label">
-                    <h4>Buscar Referencia</h4>
-                    <p>Opcional. Código CodRef.</p>
+                    <h4>Buscar Referencia(s)</h4>
+                    <p>Opcional. Una referencia (CodRef) por línea. Vacío = todas las referencias.</p>
                   </div>
-                  <input type="text" id="input-ref-clasificacion" class="input-field" style="width: 100%;" placeholder="Ej: 001234">
+                  <textarea id="input-ref-clasificacion" class="input-field" rows="3" style="width: 100%; font-family: monospace; resize: vertical;" placeholder="Ej:&#10;001234&#10;005678"></textarea>
                 </div>
               </div>
-              
-              <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); text-align: right;">
+
+              <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn btn-primary" id="btn-consultar-clasificacion" onclick="consultarClasificacion()"
                   style="min-width: 200px;">
                   <i data-lucide="search" style="width:18px"></i>
@@ -2930,6 +3299,9 @@
             <div id="almacenes-status" style="margin-top: 20px;"></div>
 
             <div id="almacenes-results" style="display: none; margin-top: 32px;">
+              <h3 style="font-size: 16px; margin-bottom: 12px;">Resumen</h3>
+              <div id="almacenes-resumen" style="display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-bottom: 32px;"></div>
+
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div>
                   <h3 style="font-size: 18px;">Listado de Almacenes</h3>
@@ -3975,6 +4347,96 @@
     }
 
     /* ── Solicitud de Unidades Logic ── */
+    function updateGeneradorSolicitudLabel(input) {
+      const file = input.files[0];
+      if (file) {
+        document.getElementById('label-generador-solicitud').textContent = '📄 ' + file.name;
+        document.getElementById('dz-generador-solicitud').classList.add('has-file');
+        document.getElementById('btn-generador-solicitud').disabled = false;
+      } else {
+        document.getElementById('btn-generador-solicitud').disabled = true;
+      }
+    }
+
+    async function generarEstructuraSolicitud() {
+      const archivo = document.getElementById('input-generador-solicitud').files[0];
+
+      const btn = document.getElementById('btn-generador-solicitud');
+      const loader = document.getElementById('loader-generador-solicitud');
+      const text = document.getElementById('text-generador-solicitud');
+      const statusDiv = document.getElementById('generador-solicitud-status');
+
+      if (!archivo) return;
+
+      btn.disabled = true;
+      loader.style.display = 'block';
+      text.style.display = 'none';
+      statusDiv.innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('referencias', archivo);
+
+      try {
+        const response = await fetch('/generador-solicitud/generate', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error en el servidor al generar la estructura.');
+        }
+
+        const blob = await response.blob();
+        const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
+        const filename = `estructura_solicitud_${fecha}.xlsx`;
+
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'Excel file',
+                accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+              }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (e) {
+            if (e.name !== 'AbortError') saveAs(blob, filename);
+          }
+        } else {
+          saveAs(blob, filename);
+        }
+
+        statusDiv.innerHTML = `
+        <div class="status-msg success">
+          <i data-lucide="check-circle" style="width:24px"></i>
+          <div>
+            <strong>¡Estructura Generada!</strong>
+            <p style="font-size:12px; margin-top:4px;">Revisa la hoja "Sin_Tallaje" del archivo (si existe) para las referencias que quedaron sin tallaje encontrado.</p>
+          </div>
+        </div>
+      `;
+      } catch (err) {
+        statusDiv.innerHTML = `
+        <div class="status-msg error">
+          <i data-lucide="x-circle" style="width:24px"></i>
+          <div>
+            <strong>Error</strong>
+            <p style="font-size:12px">${err.message}</p>
+          </div>
+        </div>
+      `;
+      } finally {
+        btn.disabled = false;
+        loader.style.display = 'none';
+        text.style.display = 'block';
+        lucide.createIcons();
+      }
+    }
+
     function updateSolicitudLabel(input) {
       const file = input.files[0];
       if (file) {
@@ -4212,6 +4674,10 @@
           titleTxt = "Consolidación Sabana MTO";
           descTxt = "Proceso automático de generación de la Sabana MTO unificando Portafolio y SQL.";
           break;
+        case 'module-generador-solicitud':
+          titleTxt = "Generador de Estructura";
+          descTxt = "Genera la hoja DETALLE (una fila por talla matriculada) a partir de un Excel de referencias nuevas.";
+          break;
         case 'module-solicitud-unidades':
           titleTxt = "Solicitud de Unidades";
           descTxt = "Cálculo inteligente de reposición basado en niveles mínimos de inventario.";
@@ -4256,6 +4722,14 @@
         case 'module-auditoria-minmax':
           titleTxt = "Auditoría de Máximos y Mínimos";
           descTxt = "Audita en cuántas tiendas está matriculada cada referencia, por fecha y por formato.";
+          break;
+        case 'module-tallaje-matriculado':
+          titleTxt = "Tallaje Matriculado";
+          descTxt = "Consulta qué tallas existen matriculadas por Tipo de Prenda, Formato y Género.";
+          break;
+        case 'module-validacion-pedidos':
+          titleTxt = "Validación de Pedidos";
+          descTxt = "Valida por Formato en cuántas tiendas activas existe cada referencia en tblSolicitudUnidades.";
           break;
         case 'module-agotados':
           titleTxt = "Buscador de Agotados";
@@ -5487,6 +5961,405 @@
       window.location.href = `/auditoria-min-max/export?${params.toString()}`;
     }
 
+    /* ── Tallaje Matriculado Logic ── */
+    const TM_ORDEN_TALLAS = [
+      '0-3', '3-6', '6-9', '9-12', '12-18', '18-24',
+      '2T', '3T', '4T', '5T', '6T',
+      '4', '6', '8', '10', '12', '14',
+      '28', '30', '32', '34', '36',
+      'XS', 'S', 'M', 'L', 'XL'
+    ];
+
+    function tmOrdenarTallas(tallas) {
+      const enOrden = TM_ORDEN_TALLAS.filter(t => tallas.includes(t));
+      const extra = tallas.filter(t => !TM_ORDEN_TALLAS.includes(t)).sort();
+      return [...enOrden, ...extra];
+    }
+
+    let tallajeDataset = null; // { fecha, total_filas, rows: [{talla, referencia, codalmacen, tipo_prenda, formato, genero}, ...] }
+
+    async function cargarDatasetTallaje() {
+      const btn = document.getElementById('btn-tm-cargar');
+      const btnConsultar = document.getElementById('btn-tm-consultar');
+      const status = document.getElementById('tm-status');
+      const info = document.getElementById('tm-dataset-info');
+      const results = document.getElementById('tm-results');
+      const fecha = document.getElementById('tm-input-fecha').value;
+
+      btn.disabled = true;
+      btnConsultar.disabled = true;
+      results.style.display = 'none';
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Cargando datos matriculados...</div>';
+      lucide.createIcons();
+
+      try {
+        const params = new URLSearchParams();
+        if (fecha) params.append('fecha', fecha);
+
+        const response = await fetch(`/tallaje-matriculado/dataset?${params.toString()}`);
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al cargar los datos.');
+        }
+
+        const data = await response.json();
+        tallajeDataset = data;
+
+        if (!data.fecha || data.total_filas === 0) {
+          info.textContent = 'No se encontraron datos matriculados para esa fecha.';
+          btnConsultar.disabled = true;
+        } else {
+          info.textContent = `Datos cargados: fecha ${data.fecha}, ${data.total_filas.toLocaleString('es-CO')} filas matriculadas. Ya puedes filtrar y consultar el tallaje.`;
+          btnConsultar.disabled = false;
+        }
+        status.innerHTML = '';
+        lucide.createIcons();
+      } catch (err) {
+        tallajeDataset = null;
+        info.textContent = 'Aún no se han cargado datos. Presiona "Cargar Datos" para empezar.';
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al cargar los datos:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function leerFiltrosTallajeMatriculado() {
+      const tiposPrenda = Array.from(document.querySelectorAll('input[name="tm-tipo-prenda"]:checked')).map(cb => cb.value);
+      const formatos = Array.from(document.querySelectorAll('input[name="tm-formato"]:checked')).map(cb => cb.value);
+      const generos = Array.from(document.querySelectorAll('input[name="tm-genero"]:checked')).map(cb => cb.value);
+      const referencias = document.getElementById('tm-input-referencias').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+      return { tiposPrenda, formatos, generos, referencias };
+    }
+
+    function consultarTallajeMatriculado() {
+      const status = document.getElementById('tm-status');
+      const results = document.getElementById('tm-results');
+      const filtros = leerFiltrosTallajeMatriculado();
+
+      if (!tallajeDataset) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Primero debes cargar los datos con el botón "Cargar Datos".</strong></div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      if (filtros.tiposPrenda.length === 0 || filtros.formatos.length === 0 || filtros.generos.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe seleccionar al menos un Tipo de Prenda, un Formato y un Género.</strong></div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      // Filtrado 100% en el navegador: no se hace ninguna consulta al servidor aquí.
+      const tiposSet = new Set(filtros.tiposPrenda);
+      const formatosSet = new Set(filtros.formatos);
+      const generosSet = new Set(filtros.generos);
+      const referenciasSet = filtros.referencias.length > 0 ? new Set(filtros.referencias) : null;
+
+      const filas = tallajeDataset.rows.filter(r =>
+        tiposSet.has(r.tipo_prenda) &&
+        formatosSet.has(r.formato) &&
+        generosSet.has(r.genero) &&
+        (!referenciasSet || referenciasSet.has(r.referencia))
+      );
+
+      const porTalla = new Map();
+      const referenciasTotales = new Set();
+      const tiendasTotales = new Set();
+      filas.forEach(r => {
+        if (!porTalla.has(r.talla)) {
+          porTalla.set(r.talla, { referencias: new Set(), tiendas: new Set() });
+        }
+        const acc = porTalla.get(r.talla);
+        acc.referencias.add(r.referencia);
+        acc.tiendas.add(r.codalmacen);
+        referenciasTotales.add(r.referencia);
+        tiendasTotales.add(r.codalmacen);
+      });
+
+      const tallasOrdenadas = tmOrdenarTallas(Array.from(porTalla.keys()));
+      const tallas = tallasOrdenadas.map(t => ({
+        talla: t,
+        referencias: porTalla.get(t).referencias.size,
+        tiendas_matriculadas: porTalla.get(t).tiendas.size
+      }));
+
+      document.getElementById('tm-kpi-fecha').textContent = tallajeDataset.fecha || '-';
+      document.getElementById('tm-kpi-tallas').textContent = tallas.length.toLocaleString('es-CO');
+      document.getElementById('tm-kpi-referencias').textContent = referenciasTotales.size.toLocaleString('es-CO');
+      document.getElementById('tm-kpi-tiendas').textContent = tiendasTotales.size.toLocaleString('es-CO');
+
+      const chips = document.getElementById('tm-tallas-chips');
+      chips.innerHTML = '';
+      tallas.forEach(item => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex; align-items:center; padding:6px 14px; border-radius:999px; background: rgba(14, 165, 233, 0.1); color: var(--primary); font-size:13px; font-weight:600;';
+        chip.textContent = item.talla;
+        chips.appendChild(chip);
+      });
+
+      const tbody = document.getElementById('tm-table-body');
+      tbody.innerHTML = '';
+      if (tallas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:16px; text-align:center; color:var(--text-muted);">No se encontraron tallas matriculadas para los filtros seleccionados.</td></tr>';
+      } else {
+        tallas.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); font-weight:600;">${escapeHtml(item.talla)}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(item.referencias).toLocaleString('es-CO')}</td>
+            <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(item.tiendas_matriculadas).toLocaleString('es-CO')}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      results.style.display = 'block';
+      status.innerHTML = '';
+      lucide.createIcons();
+    }
+
+    /* ── Validación de Pedidos Logic ── */
+    let validacionPedidosData = null; // { referencias, formatos_validados, resumen, detalle }
+
+    function leerReferenciasValidacionPedidos() {
+      return document.getElementById('vp-input-referencias').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+    }
+
+    function vpColorCobertura(pct) {
+      if (pct >= 90) return '#0f766e';
+      if (pct >= 50) return '#b45309';
+      return '#b91c1c';
+    }
+
+    function vpCeldaSubcobertura(datos) {
+      const con = datos ? datos.con : 0;
+      const activas = datos ? datos.activas : 0;
+      if (activas === 0) return '<span style="color:#94a3b8;">-</span>';
+      const color = vpColorCobertura(Math.round((con / activas) * 1000) / 10);
+      return `<span style="color:${color}; font-weight:600;">${con}/${activas}</span>`;
+    }
+
+    function renderResumenFormatoValidacion(filas, topVentas, climas) {
+      const headRow = document.getElementById('vp-resumen-head-row');
+      const fijos = ['Referencia', 'Segmentación', 'Formato', 'Tiendas Activas', 'Con Referencia', 'Sin Referencia', '% Cobertura'];
+      const alineacionFijos = ['left', 'left', 'left', 'right', 'right', 'right', 'right'];
+      let headHtml = fijos.map((titulo, i) =>
+        `<th style="padding: 10px; text-align:${alineacionFijos[i]}; border-bottom:1px solid var(--border); white-space:nowrap;">${titulo}</th>`
+      ).join('');
+      topVentas.forEach(tv => {
+        headHtml += `<th style="padding: 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;" title="Con referencia / tiendas activas de Top Venta ${escapeHtml(tv)}">TV ${escapeHtml(tv)}</th>`;
+      });
+      climas.forEach(cl => {
+        headHtml += `<th style="padding: 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;" title="Con referencia / tiendas activas de Clima ${escapeHtml(cl)}">${escapeHtml(cl)}</th>`;
+      });
+      headRow.innerHTML = headHtml;
+
+      const tbody = document.getElementById('vp-resumen-body');
+      tbody.innerHTML = '';
+      const totalCols = fijos.length + topVentas.length + climas.length;
+      if (!filas || filas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${totalCols}" style="padding:16px; text-align:center; color:var(--text-muted);">Sin resultados.</td></tr>`;
+        return;
+      }
+      filas.forEach(row => {
+        const tr = document.createElement('tr');
+        const color = vpColorCobertura(row.pct_cobertura);
+        let extraCeldas = '';
+        topVentas.forEach(tv => {
+          extraCeldas += `<td style="padding: 6px 10px; border-bottom: 1px solid var(--border); text-align:center; white-space:nowrap;">${vpCeldaSubcobertura(row.top_venta[tv])}</td>`;
+        });
+        climas.forEach(cl => {
+          extraCeldas += `<td style="padding: 6px 10px; border-bottom: 1px solid var(--border); text-align:center; white-space:nowrap;">${vpCeldaSubcobertura(row.clima[cl])}</td>`;
+        });
+        tr.innerHTML = `
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.referencia)}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.segmentacion || '-')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.formato)}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right;">${Number(row.tiendas_activas).toLocaleString('es-CO')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right; color:#0f766e; font-weight:600;">${Number(row.tiendas_con).toLocaleString('es-CO')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right; color:#b91c1c; font-weight:600;">${Number(row.tiendas_sin).toLocaleString('es-CO')}</td>
+          <td style="padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:right; font-weight:700; color:${color};">${row.pct_cobertura}%</td>
+          ${extraCeldas}
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function validarPedidos() {
+      const btn = document.getElementById('btn-vp-validar');
+      const status = document.getElementById('vp-status');
+      const results = document.getElementById('vp-results');
+      const referencias = leerReferenciasValidacionPedidos();
+
+      if (referencias.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe ingresar al menos una referencia.</strong></div>
+          </div>
+        `;
+        results.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      status.innerHTML = '<div class="status-msg" style="background: rgba(14, 165, 233, 0.05); color: var(--primary);"><i data-lucide="loader" class="spin"></i> Validando pedidos...</div>';
+      results.style.display = 'none';
+      lucide.createIcons();
+
+      try {
+        const params = new URLSearchParams();
+        referencias.forEach(r => params.append('referencia', r));
+
+        const response = await fetch(`/validacion-pedidos?${params.toString()}`);
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error al validar los pedidos.');
+        }
+
+        validacionPedidosData = await response.json();
+
+        document.getElementById('vp-kpi-referencias').textContent = validacionPedidosData.referencias.length.toLocaleString('es-CO');
+        document.getElementById('vp-kpi-formatos').textContent = validacionPedidosData.formatos_validados.length.toLocaleString('es-CO');
+
+        document.getElementById('vp-filtro-referencia').value = '';
+        poblarFiltroFormatoValidacion(validacionPedidosData.formatos_validados);
+        document.getElementById('vp-solo-faltantes').checked = false;
+        aplicarFiltrosResultadoValidacion();
+
+        results.style.display = 'block';
+        status.innerHTML = '';
+        lucide.createIcons();
+      } catch (err) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Error al validar los pedidos:</strong> ${err.message}</div>
+          </div>
+        `;
+        lucide.createIcons();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function poblarFiltroFormatoValidacion(formatos) {
+      const contenedor = document.getElementById('vp-filtro-formato');
+      contenedor.innerHTML = formatos.map(f => `
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+          <input type="checkbox" class="custom-cb" value="${escapeHtml(f)}" checked onchange="aplicarFiltrosResultadoValidacion()"> ${escapeHtml(f)}
+        </label>
+      `).join('');
+    }
+
+    function leerFiltrosResultadoValidacion() {
+      const referenciaTexto = document.getElementById('vp-filtro-referencia').value.trim().toLowerCase();
+      const formatosSeleccionados = new Set(
+        Array.from(document.querySelectorAll('#vp-filtro-formato input[type="checkbox"]:checked')).map(cb => cb.value)
+      );
+      return { referenciaTexto, formatosSeleccionados };
+    }
+
+    function aplicarFiltrosResultadoValidacion() {
+      if (!validacionPedidosData) return;
+      const { referenciaTexto, formatosSeleccionados } = leerFiltrosResultadoValidacion();
+
+      const resumenFiltrado = validacionPedidosData.resumen.filter(row =>
+        (!referenciaTexto || row.referencia.toLowerCase().includes(referenciaTexto)) &&
+        formatosSeleccionados.has(row.formato)
+      );
+
+      renderResumenFormatoValidacion(
+        resumenFiltrado,
+        validacionPedidosData.top_ventas_validados,
+        validacionPedidosData.climas_validados
+      );
+
+      renderDetalleValidacionPedidos();
+      lucide.createIcons();
+    }
+
+    function renderDetalleValidacionPedidos() {
+      const tbody = document.getElementById('vp-detalle-body');
+      if (!validacionPedidosData) {
+        tbody.innerHTML = '';
+        return;
+      }
+      const soloFaltantes = document.getElementById('vp-solo-faltantes').checked;
+      const { referenciaTexto, formatosSeleccionados } = leerFiltrosResultadoValidacion();
+
+      let filas = validacionPedidosData.detalle.filter(d =>
+        (!referenciaTexto || d.referencia.toLowerCase().includes(referenciaTexto)) &&
+        formatosSeleccionados.has(d.formato)
+      );
+      if (soloFaltantes) {
+        filas = filas.filter(d => !d.tiene_referencia);
+      }
+
+      tbody.innerHTML = '';
+      if (filas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; text-align:center; color:var(--text-muted);">Sin registros para mostrar.</td></tr>';
+        return;
+      }
+      filas.forEach(row => {
+        const tr = document.createElement('tr');
+        const estadoHtml = row.tiene_referencia
+          ? '<span style="color:#0f766e; font-weight:600;">&check; Tiene</span>'
+          : '<span style="color:#b91c1c; font-weight:600;">&#10007; No tiene</span>';
+        tr.innerHTML = `
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.referencia)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.segmentacion || '-')}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.formato)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.top_venta)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.clima)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.codigo)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border);">${escapeHtml(row.tienda)}</td>
+          <td style="padding: 6px 10px; border-bottom: 1px solid var(--border); text-align:center;">${estadoHtml}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportarValidacionPedidos() {
+      const status = document.getElementById('vp-status');
+      const referencias = leerReferenciasValidacionPedidos();
+
+      if (referencias.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe ingresar al menos una referencia para exportar.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const params = new URLSearchParams();
+      referencias.forEach(r => params.append('referencia', r));
+      window.location.href = `/validacion-pedidos/export?${params.toString()}`;
+    }
+
     /* ── Planner de Asignaciones Logic ── */
     let plannerDropdownsLoaded = false;
     let plannerData = [];
@@ -6314,7 +7187,12 @@
       card.innerHTML = `
         <div class="filter-card-header">
           <h4>${label}</h4>
-          <span class="filter-count-badge" id="count-almacenes-${key}">Todos</span>
+          <div class="filter-card-header-right">
+            <span class="filter-count-badge" id="count-almacenes-${key}">Todos</span>
+            <button type="button" class="filter-clear-btn" onclick="limpiarFiltroAlmacenes('${key}')" title="Limpiar filtro de ${label}">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
         </div>
         <div class="filter-search-wrap">
           <i data-lucide="search"></i>
@@ -6380,13 +7258,18 @@
       badge.classList.toggle('active', n > 0);
     }
 
+    function limpiarFiltroAlmacenes(key) {
+      document.querySelectorAll(`input[name="f-almacenes-${key}"]`).forEach(cb => cb.checked = false);
+      updateAlmacenesFilterCount(key);
+      const container = document.getElementById(`filter-almacenes-${key}`);
+      const card = container ? container.closest('.filter-card') : null;
+      const searchInput = card ? card.querySelector('.filter-search-input') : null;
+      if (searchInput) searchInput.value = '';
+      filtrarOpcionesAlmacenes(key, '');
+    }
+
     function resetFiltrosAlmacenes() {
-      almacenesFilterKeys.forEach(key => {
-        document.querySelectorAll(`input[name="f-almacenes-${key}"]`).forEach(cb => cb.checked = false);
-        updateAlmacenesFilterCount(key);
-        filtrarOpcionesAlmacenes(key, '');
-      });
-      document.querySelectorAll('#almacenes-filters-grid .filter-search-input').forEach(inp => inp.value = '');
+      almacenesFilterKeys.forEach(key => limpiarFiltroAlmacenes(key));
     }
 
     function getAlmacenesFilterParams() {
@@ -6396,6 +7279,47 @@
         checked.forEach(val => params.append(key, val));
       });
       return params;
+    }
+
+    function contarPorCampoAlmacenes(rows, campo) {
+      const counts = new Map();
+      rows.forEach(row => {
+        const valor = (row[campo] === null || row[campo] === undefined || String(row[campo]).trim() === '')
+          ? 'Sin dato'
+          : String(row[campo]).trim();
+        counts.set(valor, (counts.get(valor) || 0) + 1);
+      });
+      return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    }
+
+    function renderResumenAlmacenes(rows) {
+      const resumen = document.getElementById('almacenes-resumen');
+      const grupos = [
+        { campo: 'FORMATO', titulo: 'Por Formato' },
+        { campo: 'CLIMA', titulo: 'Por Clima' },
+        { campo: 'ZONA', titulo: 'Por Zona' }
+      ];
+
+      resumen.innerHTML = grupos.map(({ campo, titulo }) => {
+        const conteos = contarPorCampoAlmacenes(rows, campo);
+        const filas = conteos.map(([valor, count]) => `
+          <tr>
+            <td style="padding: 5px 0; border-bottom: 1px dotted var(--border);">${escapeHtml(valor)}</td>
+            <td style="padding: 5px 0; border-bottom: 1px dotted var(--border); text-align:right; font-weight:600; color: var(--primary);">${count.toLocaleString('es-CO')}</td>
+          </tr>
+        `).join('');
+
+        return `
+          <div style="border: 1px solid var(--border); border-radius: var(--radius-md); background: white; padding: 16px;">
+            <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 10px;">${titulo}</h4>
+            <div style="max-height: 220px; overflow-y: auto;">
+              <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                <tbody>${filas}</tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     async function consultarAlmacenes() {
@@ -6424,6 +7348,8 @@
           status.innerHTML = '';
           results.style.display = 'block';
           countText.textContent = `Se encontraron ${data.total} almacenes.`;
+
+          renderResumenAlmacenes(data.data);
 
           const cols = Object.keys(data.data[0]);
           tableHead.innerHTML = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
@@ -6710,9 +7636,14 @@
       }
     }
 
+    function leerReferenciasClasificacion() {
+      return document.getElementById('input-ref-clasificacion').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+    }
+
     async function consultarClasificacion() {
       const fecha = document.getElementById('input-fecha-clasificacion').value;
-      const referencia = document.getElementById('input-ref-clasificacion').value;
+      const referencias = leerReferenciasClasificacion();
       const btn = document.getElementById('btn-consultar-clasificacion');
       const status = document.getElementById('clasificacion-status');
       const results = document.getElementById('clasificacion-results');
@@ -6730,11 +7661,13 @@
       lucide.createIcons();
 
       try {
-        let url = `/clasificacion/report?fecha=${fecha}`;
-        if (referencia) url += `&referencia=${encodeURIComponent(referencia)}`;
-        
+        const params = new URLSearchParams();
+        params.append('fecha', fecha);
+        referencias.forEach(r => params.append('referencia', r));
+        const url = `/clasificacion/report?${params.toString()}`;
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.detail || "Error al consultar los datos.");
@@ -6824,12 +7757,13 @@
 
     function exportarClasificacion() {
       const fecha = document.getElementById('input-fecha-clasificacion').value;
-      const referencia = document.getElementById('input-ref-clasificacion').value;
+      const referencias = leerReferenciasClasificacion();
       if (!fecha) return;
-      
-      let url = `/clasificacion/export?fecha=${fecha}`;
-      if (referencia) url += `&referencia=${encodeURIComponent(referencia)}`;
-      window.location.href = url;
+
+      const params = new URLSearchParams();
+      params.append('fecha', fecha);
+      referencias.forEach(r => params.append('referencia', r));
+      window.location.href = `/clasificacion/export?${params.toString()}`;
     }
   </script>
 
