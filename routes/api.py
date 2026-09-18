@@ -8,13 +8,14 @@ from models.schemas import (
 from services.algorithm import distribuir_inventario
 from services.sabana_service import generate_sabana_mto
 from services.unit_request_service import generate_unit_request
-from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia
+from services.solicitud_unidades_service import consultar_solicitud_unidades, get_solicitud_unidades_dataframe, resumen_solicitud_unidades, resumen_solicitud_unidades_por_referencia, generar_reporte_cobertura_archivo
 from services.inv_tiendas_service import resumen_inventario_tiendas, exportar_inventario_tiendas
 from services import planner_service
 from services import auditoria_min_max_service
 from services import tallaje_matriculado_service
 from services import validacion_pedidos_service
 from services.generador_solicitud_service import generar_estructura_solicitud
+from services.validacion_compromisos_service import generar_validacion_compromisos
 from services.outlet_service import generate_sabana_outlet
 from services.devolucion_outlets import procesar_devolucion
 from services.devolucion_outlets import procesar_devolucion
@@ -441,6 +442,34 @@ async def generate_estructura_solicitud_endpoint(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando la estructura de solicitud: {str(e)}")
 
+@router.post("/validacion-compromisos/generate", tags=["Validación de Compromisos"])
+async def generate_validacion_compromisos_endpoint(
+    archivo: UploadFile = File(..., description="Excel con columnas CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI"),
+    fecha: str = Form(..., description="Fecha a filtrar en tblAgotados (YYYY-MM-DD)")
+):
+    """
+    Cruza un archivo de compromisos (con SKU armado como CODALMACEN+REFERENCIA+TALLA+COLOR) contra
+    tblAgotados para la fecha indicada, trayendo STOCK/MINIMO/TRANSITO/STOCKTOTAL_inventario y
+    calculando NECESIDAD, NECESIDAD CON TRANSITO, CUBRIMIENTO y CUBRIMIENTO CON TRANSITO.
+    """
+    if not (archivo.filename.endswith('.xlsx') or archivo.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel.")
+
+    try:
+        contenido = await archivo.read()
+        output = generar_validacion_compromisos(contenido, fecha)
+
+        filename = f"validacion_compromisos_{fecha}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando la validación de compromisos: {str(e)}")
+
 @router.get("/unit-request/query", tags=["Solicitud de Unidades"])
 def query_unit_request(cdcdgo: List[str] = Query(..., description="Una o varias referencias CDCDGO a buscar")):
     """Consulta la tabla tblSolicitudUnidades por una o varias referencias CDCDGO."""
@@ -486,6 +515,35 @@ def get_unit_request_summary(cdcdgo: List[str] = Query(None, description="Una o 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando resumen: {str(e)}")
+
+@router.post("/unit-request/coverage-report", tags=["Reportes y Análisis"])
+async def generate_unit_request_coverage_report(
+    archivo: UploadFile = File(..., description="Excel con columnas CLIENTE (=CANAL), REFERENCIA y ARCHIVO ORIGEN")
+):
+    """
+    A partir de un Excel de Cliente+Referencia+Archivo Origen, genera un reporte con dónde está
+    cargada cada combinación en tblSolicitudUnidades, y en qué tiendas activas de ese canal
+    (Maestra_Almacenes) todavía no está cargada.
+    """
+    if not (archivo.filename.endswith('.xlsx') or archivo.filename.endswith('.xls')):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel.")
+
+    try:
+        contenido = await archivo.read()
+        output = generar_reporte_cobertura_archivo(contenido)
+
+        fecha_hoy = datetime.now().strftime("%d-%m-%Y")
+        filename = f"cobertura_solicitud_unidades_{fecha_hoy}.xlsx"
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generando el reporte de cobertura: {str(e)}")
 
 @router.get("/inv-tiendas/summary", tags=["Reportes y Análisis"])
 def get_inv_tiendas_summary(
@@ -1097,10 +1155,14 @@ async def export_traslados_from_excel(
         raise HTTPException(status_code=500, detail=f"Error generando el Excel de traslados: {str(e)}")
 
 @router.get("/referencias-matriculadas", tags=["Referencias Matriculadas"])
-def get_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None, pais: str = "Colombia"):
+def get_referencias_matriculadas(
+    fecha: str = None,
+    codigo_tienda: List[str] = Query(None, description="Uno o varios códigos de tienda (opcional)"),
+    pais: str = "Colombia"
+):
     """
     Devuelve un resumen de referencias matriculadas a partir de tblAgotados.
-    Filtra por país, mínimo mayor a cero, fecha opcional y tienda opcional.
+    Filtra por país, mínimo mayor a cero, fecha opcional y una o varias tiendas opcionales.
     """
     try:
         summary = get_referencias_matriculadas_summary(
@@ -1114,7 +1176,11 @@ def get_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None, p
 
 
 @router.get("/referencias-matriculadas/export", tags=["Referencias Matriculadas"])
-def export_referencias_matriculadas(fecha: str = None, codigo_tienda: str = None, pais: str = "Colombia"):
+def export_referencias_matriculadas(
+    fecha: str = None,
+    codigo_tienda: List[str] = Query(None, description="Uno o varios códigos de tienda (opcional)"),
+    pais: str = "Colombia"
+):
     """
     Exporta el detalle completo de referencias matriculadas según los filtros seleccionados.
     """

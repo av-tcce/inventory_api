@@ -16,6 +16,7 @@
   <!-- Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
@@ -924,6 +925,11 @@
               <i data-lucide="check-square"></i>
               Validación de Pedidos
             </button>
+            <button type="button" class="nav-item" data-target="module-validacion-compromisos"
+              onclick="switchModule('module-validacion-compromisos', this)">
+              <i data-lucide="clipboard-check"></i>
+              Validación de Compromisos
+            </button>
             <button type="button" class="nav-item" data-target="module-clasificacion"
               onclick="switchModule('module-clasificacion', this)">
               <i data-lucide="tag"></i>
@@ -932,7 +938,7 @@
             <button type="button" class="nav-item" data-target="module-referencias-matriculadas"
               onclick="switchModule('module-referencias-matriculadas', this)">
               <i data-lucide="clipboard-list"></i>
-              Referencias Matriculadas
+              Máximos y Mínimos
             </button>
             <button type="button" class="nav-item" data-target="module-consulta-curvas"
               onclick="switchModule('module-consulta-curvas', this)">
@@ -963,7 +969,7 @@
           <button type="button" class="nav-item" data-target="module-referencias-matriculadas"
             onclick="switchModule('module-referencias-matriculadas', this)">
             <i data-lucide="clipboard-list"></i>
-            Referencias Matriculadas
+            Máximos y Mínimos
           </button>
           <button type="button" class="nav-item" data-target="module-sabana"
             onclick="switchModule('module-sabana', this)">
@@ -2167,6 +2173,31 @@
               <div id="solicitud-query-status" style="margin-top: 14px;"></div>
               <div id="solicitud-query-result" style="margin-top: 16px; max-height: 350px; overflow: auto;"></div>
             </div>
+
+            <div class="settings-panel" style="margin-top: 24px;">
+              <div class="setting-label" style="margin-bottom: 16px;">
+                <h4>Reporte de Cobertura por Archivo</h4>
+                <p>Sube un Excel con columnas <strong>CLIENTE</strong> (=CANAL en tblSolicitudUnidades), <strong>REFERENCIA</strong> y <strong>ARCHIVO ORIGEN</strong>.
+                  Genera un Excel con dos hojas: dónde está cargada cada combinación Cliente+Referencia, y en qué tiendas activas de ese canal
+                  (Maestra_Almacenes) todavía no está cargada.</p>
+              </div>
+
+              <div class="drop-zone" id="dz-cobertura-solicitud"
+                onclick="document.getElementById('input-cobertura-solicitud').click()" style="margin-bottom: 16px;">
+                <input type="file" id="input-cobertura-solicitud" hidden onchange="updateCoberturaSolicitudLabel(this)" />
+                <i data-lucide="file-spreadsheet"></i>
+                <h4 id="label-cobertura-solicitud">Seleccionar Archivo (CLIENTE, REFERENCIA, ARCHIVO ORIGEN)</h4>
+                <p style="font-size:11px; margin-top:4px;">Requerido.</p>
+              </div>
+
+              <button class="btn btn-primary" id="btn-cobertura-solicitud" onclick="generarReporteCoberturaSolicitud()"
+                style="width: 100%; height: 56px;" disabled>
+                <div class="loader" id="loader-cobertura-solicitud"></div>
+                <div id="text-cobertura-solicitud">Generar Reporte de Cobertura</div>
+              </button>
+
+              <div id="cobertura-solicitud-status" style="margin-top: 16px;"></div>
+            </div>
           </div>
         </section>
 
@@ -2626,12 +2657,18 @@
                 </table>
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
                 <h4 style="font-size: 14px; margin: 0;">Detalle por Tienda</h4>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                  <input type="checkbox" id="vp-solo-faltantes" class="custom-cb" onchange="renderDetalleValidacionPedidos()">
-                  Mostrar solo tiendas sin la referencia
-                </label>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" id="vp-solo-faltantes" class="custom-cb" onchange="renderDetalleValidacionPedidos()">
+                    Mostrar solo tiendas sin la referencia
+                  </label>
+                  <button class="btn btn-outline" onclick="exportarDetalleTiendaValidacionPedidos()" style="font-size: 12px; padding: 6px 12px;">
+                    <i data-lucide="download" style="width: 14px; margin-right: 4px;"></i>
+                    Exportar esta vista
+                  </button>
+                </div>
               </div>
               <div style="border: 1px solid var(--border); border-radius: 8px; overflow: auto; background: white; max-height: 500px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
@@ -2654,6 +2691,56 @@
           </div>
         </section>
 
+        <section id="module-validacion-compromisos" class="module-panel">
+          <div class="card stagger-1">
+            <div class="card-step">01</div>
+            <div class="card-header">
+              <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
+                <i data-lucide="clipboard-check"></i>
+              </div>
+              <div class="card-title">Validación de Compromisos</div>
+            </div>
+
+            <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
+              <p style="color:var(--text-main); font-size: 14px; margin-bottom: 8px; font-weight: 600;">
+                <i data-lucide="info" style="width:16px; display:inline; vertical-align:text-bottom; color:var(--primary); margin-right:4px;"></i>
+                Cruce de compromisos contra tblAgotados y transito_cedi
+              </p>
+              <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Sube un Excel con columnas <strong>CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI</strong>.
+                Se arma un <strong>SKU</strong> (CODALMACEN+REFERENCIA+TALLA+COLOR) y se cruza contra <strong>tblAgotados</strong> en la fecha
+                indicada (STOCK, MINIMO, TRANSITO, STOCKTOTAL_inventario) y contra <strong>transito_cedi</strong> (mismo SKU vía
+                TIENDA+REFERENCIA+TALLA+COLOR, sin filtro de fecha) para traer lo <strong>comprometido pero aún no despachado</strong>
+                de ese SKU. Calcula NECESIDAD, NECESIDAD CON TRANSITO, CUBRIMIENTO y CUBRIMIENTO CON TRANSITO (%).
+              </p>
+            </div>
+
+            <div class="settings-panel" style="margin-bottom: 24px;">
+              <div style="margin-bottom: 20px;">
+                <label style="font-size: 12px; font-weight: 600; display: block; margin-bottom: 6px;">Fecha (obligatorio)</label>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Fecha exacta a filtrar en tblAgotados (YYYY-MM-DD).</p>
+                <input type="date" id="input-fecha-validacion-compromisos" class="input-field" style="width: 260px;">
+              </div>
+
+              <div class="drop-zone" id="dz-validacion-compromisos"
+                onclick="document.getElementById('input-validacion-compromisos').click()" style="margin-bottom: 16px;">
+                <input type="file" id="input-validacion-compromisos" hidden onchange="updateValidacionCompromisosLabel(this)" />
+                <i data-lucide="file-spreadsheet"></i>
+                <h4 id="label-validacion-compromisos">Seleccionar Archivo de Compromisos</h4>
+                <p style="font-size:11px; margin-top:4px;">Requerido. Columnas: CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI.</p>
+              </div>
+
+              <button class="btn btn-primary" id="btn-validacion-compromisos" onclick="generarValidacionCompromisos()"
+                style="width: 100%; height: 56px;" disabled>
+                <div class="loader" id="loader-validacion-compromisos"></div>
+                <div id="text-validacion-compromisos">Generar Validación</div>
+              </button>
+
+              <div id="validacion-compromisos-status" style="margin-top: 16px;"></div>
+            </div>
+          </div>
+        </section>
+
         <section id="module-referencias-matriculadas" class="module-panel">
           <div class="card stagger-1">
             <div class="card-step">01</div>
@@ -2661,7 +2748,7 @@
               <div class="icon-box" style="background: linear-gradient(135deg, var(--primary), var(--secondary))">
                 <i data-lucide="clipboard-list"></i>
               </div>
-              <div class="card-title">Referencias Matriculadas</div>
+              <div class="card-title">Máximos y Mínimos</div>
             </div>
 
             <div style="background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1); padding: 16px; border-radius: var(--radius-md); margin-bottom: 24px;">
@@ -2675,7 +2762,7 @@
             </div>
 
             <div class="settings-panel" style="margin-bottom: 24px;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: end;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
                 <div class="setting-group">
                   <div class="setting-label">
                     <h4>Fecha</h4>
@@ -2685,10 +2772,10 @@
                 </div>
                 <div class="setting-group">
                   <div class="setting-label">
-                    <h4>Código de tienda</h4>
-                    <p>Filtra por tienda si lo necesitas.</p>
+                    <h4>Código(s) de tienda</h4>
+                    <p>Opcional. Un código por línea. Vacío = todas las tiendas.</p>
                   </div>
-                  <input type="text" id="input-tienda-referencias-matriculadas" class="input-field" placeholder="Ej: 101" style="width: 100%;">
+                  <textarea id="input-tienda-referencias-matriculadas" class="input-field" rows="3" placeholder="Ej:&#10;101&#10;102" style="width: 100%; font-family: monospace; resize: vertical;"></textarea>
                 </div>
               </div>
 
@@ -4437,6 +4524,108 @@
       }
     }
 
+    function updateValidacionCompromisosLabel(input) {
+      const file = input.files[0];
+      if (file) {
+        document.getElementById('label-validacion-compromisos').textContent = '📄 ' + file.name;
+        document.getElementById('dz-validacion-compromisos').classList.add('has-file');
+        document.getElementById('btn-validacion-compromisos').disabled = false;
+      } else {
+        document.getElementById('btn-validacion-compromisos').disabled = true;
+      }
+    }
+
+    async function generarValidacionCompromisos() {
+      const archivo = document.getElementById('input-validacion-compromisos').files[0];
+      const fecha = document.getElementById('input-fecha-validacion-compromisos').value;
+
+      const btn = document.getElementById('btn-validacion-compromisos');
+      const loader = document.getElementById('loader-validacion-compromisos');
+      const text = document.getElementById('text-validacion-compromisos');
+      const statusDiv = document.getElementById('validacion-compromisos-status');
+
+      if (!archivo) return;
+
+      if (!fecha) {
+        statusDiv.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>Debe seleccionar una fecha.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      btn.disabled = true;
+      loader.style.display = 'block';
+      text.style.display = 'none';
+      statusDiv.innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('archivo', archivo);
+      formData.append('fecha', fecha);
+
+      try {
+        const response = await fetch('/validacion-compromisos/generate', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error en el servidor al generar la validación.');
+        }
+
+        const blob = await response.blob();
+        const filename = `validacion_compromisos_${fecha}.xlsx`;
+
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'Excel file',
+                accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+              }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (e) {
+            if (e.name !== 'AbortError') saveAs(blob, filename);
+          }
+        } else {
+          saveAs(blob, filename);
+        }
+
+        statusDiv.innerHTML = `
+        <div class="status-msg success">
+          <i data-lucide="check-circle" style="width:24px"></i>
+          <div>
+            <strong>¡Validación Generada!</strong>
+            <p style="font-size:12px; margin-top:4px;">El archivo se ha procesado correctamente.</p>
+          </div>
+        </div>
+      `;
+      } catch (err) {
+        statusDiv.innerHTML = `
+        <div class="status-msg error">
+          <i data-lucide="x-circle" style="width:24px"></i>
+          <div>
+            <strong>Error</strong>
+            <p style="font-size:12px">${err.message}</p>
+          </div>
+        </div>
+      `;
+      } finally {
+        btn.disabled = false;
+        loader.style.display = 'none';
+        text.style.display = 'block';
+        lucide.createIcons();
+      }
+    }
+
     function updateSolicitudLabel(input) {
       const file = input.files[0];
       if (file) {
@@ -4629,6 +4818,96 @@
       window.location.href = `/unit-request/query/export?${params.toString()}`;
     }
 
+    function updateCoberturaSolicitudLabel(input) {
+      const file = input.files[0];
+      if (file) {
+        document.getElementById('label-cobertura-solicitud').textContent = '📄 ' + file.name;
+        document.getElementById('dz-cobertura-solicitud').classList.add('has-file');
+        document.getElementById('btn-cobertura-solicitud').disabled = false;
+      } else {
+        document.getElementById('btn-cobertura-solicitud').disabled = true;
+      }
+    }
+
+    async function generarReporteCoberturaSolicitud() {
+      const archivo = document.getElementById('input-cobertura-solicitud').files[0];
+
+      const btn = document.getElementById('btn-cobertura-solicitud');
+      const loader = document.getElementById('loader-cobertura-solicitud');
+      const text = document.getElementById('text-cobertura-solicitud');
+      const statusDiv = document.getElementById('cobertura-solicitud-status');
+
+      if (!archivo) return;
+
+      btn.disabled = true;
+      loader.style.display = 'block';
+      text.style.display = 'none';
+      statusDiv.innerHTML = '';
+
+      const formData = new FormData();
+      formData.append('archivo', archivo);
+
+      try {
+        const response = await fetch('/unit-request/coverage-report', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const message = await readErrorMessage(response);
+          throw new Error(message || 'Error en el servidor al generar el reporte de cobertura.');
+        }
+
+        const blob = await response.blob();
+        const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
+        const filename = `cobertura_solicitud_unidades_${fecha}.xlsx`;
+
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'Excel file',
+                accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+              }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (e) {
+            if (e.name !== 'AbortError') saveAs(blob, filename);
+          }
+        } else {
+          saveAs(blob, filename);
+        }
+
+        statusDiv.innerHTML = `
+        <div class="status-msg success">
+          <i data-lucide="check-circle" style="width:24px"></i>
+          <div>
+            <strong>¡Reporte Generado!</strong>
+            <p style="font-size:12px; margin-top:4px;">Revisa las hojas "Cargado" y "No_Cargado" del archivo descargado.</p>
+          </div>
+        </div>
+      `;
+      } catch (err) {
+        statusDiv.innerHTML = `
+        <div class="status-msg error">
+          <i data-lucide="x-circle" style="width:24px"></i>
+          <div>
+            <strong>Error</strong>
+            <p style="font-size:12px">${err.message}</p>
+          </div>
+        </div>
+      `;
+      } finally {
+        btn.disabled = false;
+        loader.style.display = 'none';
+        text.style.display = 'block';
+        lucide.createIcons();
+      }
+    }
+
     // Toggle Submenu function
     function toggleSubmenu(id) {
       const submenu = document.getElementById(id);
@@ -4731,6 +5010,10 @@
           titleTxt = "Validación de Pedidos";
           descTxt = "Valida por Formato en cuántas tiendas activas existe cada referencia en tblSolicitudUnidades.";
           break;
+        case 'module-validacion-compromisos':
+          titleTxt = "Validación de Compromisos";
+          descTxt = "Cruza un archivo de compromisos (por SKU) contra tblAgotados: Stock, Mínimo, Tránsito y Cubrimiento.";
+          break;
         case 'module-agotados':
           titleTxt = "Buscador de Agotados";
           descTxt = "Consulta de registros de stock, necesidad y matriculación en la base de datos central.";
@@ -4747,7 +5030,7 @@
           inicializarModuloClasificacion();
           break;
         case 'module-referencias-matriculadas':
-          titleTxt = "Referencias Matriculadas";
+          titleTxt = "Máximos y Mínimos";
           descTxt = "Resumen de referencias con mínimo activo filtradas por país, fecha y tienda.";
           inicializarModuloReferenciasMatriculadas();
           break;
@@ -4796,9 +5079,14 @@
       }
     }
 
+    function leerTiendasReferenciasMatriculadas() {
+      return document.getElementById('input-tienda-referencias-matriculadas').value
+        .split('\n').map(v => v.trim()).filter(v => v.length > 0);
+    }
+
     async function consultarReferenciasMatriculadas() {
       const fecha = document.getElementById('input-fecha-referencias-matriculadas').value;
-      const tienda = document.getElementById('input-tienda-referencias-matriculadas').value.trim();
+      const tiendas = leerTiendasReferenciasMatriculadas();
       const status = document.getElementById('referencias-matriculadas-status');
       const results = document.getElementById('referencias-matriculadas-results');
       const totalEl = document.getElementById('referencias-matriculadas-total');
@@ -4814,9 +5102,11 @@
       if (results) results.style.display = 'none';
 
       try {
-        let url = '/referencias-matriculadas?pais=Colombia';
-        if (fecha) url += `&fecha=${encodeURIComponent(fecha)}`;
-        if (tienda) url += `&codigo_tienda=${encodeURIComponent(tienda)}`;
+        const params = new URLSearchParams();
+        params.append('pais', 'Colombia');
+        if (fecha) params.append('fecha', fecha);
+        tiendas.forEach(t => params.append('codigo_tienda', t));
+        let url = `/referencias-matriculadas?${params.toString()}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -4948,11 +5238,12 @@
 
     function exportarReferenciasMatriculadas() {
       const fecha = document.getElementById('input-fecha-referencias-matriculadas').value;
-      const tienda = document.getElementById('input-tienda-referencias-matriculadas').value.trim();
-      let url = '/referencias-matriculadas/export?pais=Colombia';
-      if (fecha) url += `&fecha=${encodeURIComponent(fecha)}`;
-      if (tienda) url += `&codigo_tienda=${encodeURIComponent(tienda)}`;
-      window.location.href = url;
+      const tiendas = leerTiendasReferenciasMatriculadas();
+      const params = new URLSearchParams();
+      params.append('pais', 'Colombia');
+      if (fecha) params.append('fecha', fecha);
+      tiendas.forEach(t => params.append('codigo_tienda', t));
+      window.location.href = `/referencias-matriculadas/export?${params.toString()}`;
     }
 
     /* ── Buscador de Agotados Logic ── */
@@ -6299,12 +6590,8 @@
       lucide.createIcons();
     }
 
-    function renderDetalleValidacionPedidos() {
-      const tbody = document.getElementById('vp-detalle-body');
-      if (!validacionPedidosData) {
-        tbody.innerHTML = '';
-        return;
-      }
+    function obtenerDetalleTiendaFiltrado() {
+      if (!validacionPedidosData) return [];
       const soloFaltantes = document.getElementById('vp-solo-faltantes').checked;
       const { referenciaTexto, formatosSeleccionados } = leerFiltrosResultadoValidacion();
 
@@ -6315,6 +6602,16 @@
       if (soloFaltantes) {
         filas = filas.filter(d => !d.tiene_referencia);
       }
+      return filas;
+    }
+
+    function renderDetalleValidacionPedidos() {
+      const tbody = document.getElementById('vp-detalle-body');
+      if (!validacionPedidosData) {
+        tbody.innerHTML = '';
+        return;
+      }
+      const filas = obtenerDetalleTiendaFiltrado();
 
       tbody.innerHTML = '';
       if (filas.length === 0) {
@@ -6338,6 +6635,39 @@
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    function exportarDetalleTiendaValidacionPedidos() {
+      const status = document.getElementById('vp-status');
+      const filas = obtenerDetalleTiendaFiltrado();
+
+      if (filas.length === 0) {
+        status.innerHTML = `
+          <div class="status-msg error">
+            <i data-lucide="x-circle" style="width:24px"></i>
+            <div><strong>No hay filas para exportar con los filtros actuales.</strong></div>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const datos = filas.map(row => ({
+        'Referencia': row.referencia,
+        'Segmentación': row.segmentacion || '-',
+        'Formato': row.formato,
+        'Top Venta': row.top_venta,
+        'Clima': row.clima,
+        'Código': row.codigo,
+        'Tienda': row.tienda,
+        'Estado': row.tiene_referencia ? 'Tiene' : 'No tiene'
+      }));
+
+      const hoja = XLSX.utils.json_to_sheet(datos);
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, 'Detalle');
+      const fecha = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(libro, `validacion_pedidos_detalle_${fecha}.xlsx`);
     }
 
     function exportarValidacionPedidos() {

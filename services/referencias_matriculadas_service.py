@@ -24,6 +24,14 @@ def _find_column(columns, *candidates):
     return None
 
 
+def _normalizar_codigos_tienda(codigo_tienda):
+    """Acepta un código suelto (str) o una lista de códigos; retorna una lista limpia (sin vacíos)."""
+    if not codigo_tienda:
+        return []
+    valores = codigo_tienda if isinstance(codigo_tienda, (list, tuple, set)) else [codigo_tienda]
+    return [str(v).strip() for v in valores if v and str(v).strip()]
+
+
 def get_referencias_matriculadas(fecha=None, codigo_tienda=None, pais="Colombia"):
     conn = None
     try:
@@ -80,9 +88,11 @@ def get_referencias_matriculadas(fecha=None, codigo_tienda=None, pais="Colombia"
             query += f" AND CAST([{fecha_col}] AS DATE) = ?"
             params.append(fecha)
 
-        if codigo_tienda:
-            query += f" AND [{tienda_col}] = ?"
-            params.append(codigo_tienda)
+        codigos = _normalizar_codigos_tienda(codigo_tienda)
+        if codigos:
+            placeholders = ",".join("?" for _ in codigos)
+            query += f" AND [{tienda_col}] IN ({placeholders})"
+            params.extend(codigos)
 
         df = pd.read_sql(query, conn, params=params)
         return df
@@ -118,9 +128,11 @@ def get_referencias_matriculadas_export(fecha=None, codigo_tienda=None, pais="Co
             query += f" AND CAST([{fecha_col}] AS DATE) = ?"
             params.append(fecha)
 
-        if codigo_tienda:
-            query += f" AND [{tienda_col}] = ?"
-            params.append(codigo_tienda)
+        codigos = _normalizar_codigos_tienda(codigo_tienda)
+        if codigos:
+            placeholders = ",".join("?" for _ in codigos)
+            query += f" AND [{tienda_col}] IN ({placeholders})"
+            params.extend(codigos)
 
         return pd.read_sql(query, conn, params=params)
     except Exception as exc:
