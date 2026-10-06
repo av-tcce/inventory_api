@@ -12,6 +12,33 @@ def _normalize_text_series(series: pd.Series) -> pd.Series:
     return series.astype(str).str.strip().str.upper()
 
 
+def _leer_hoja_con_encabezado_dinamico(ruta: str, sheet_name: str, columnas: list[str], engine: str = None, filas_busqueda: int = 15) -> pd.DataFrame:
+    """
+    Lee una hoja buscando dinámicamente la fila que contiene TODAS las columnas indicadas, en vez
+    de asumir un número de fila fijo. El archivo de Maestra de Descuentos es externo y mantenido
+    manualmente por otro equipo: si alguien inserta o quita una fila arriba del encabezado (por
+    ejemplo una fila de campaña promocional), un `header=N` fijo deja de coincidir y pandas falla
+    con "Usecols do not match columns". Esto evita que ese desfase rompa el módulo.
+    """
+    df_raw = pd.read_excel(ruta, sheet_name=sheet_name, header=None, nrows=filas_busqueda, engine=engine)
+
+    header_idx = None
+    for i, row in df_raw.iterrows():
+        valores_fila = {str(v).strip().upper() for v in row.tolist()}
+        if all(col.upper() in valores_fila for col in columnas):
+            header_idx = i
+            break
+
+    if header_idx is None:
+        raise ValueError(
+            f"No se encontró la fila de encabezado con las columnas {columnas} en la hoja "
+            f"'{sheet_name}' de {ruta} (se revisaron las primeras {filas_busqueda} filas). "
+            f"Verifique que el archivo no haya cambiado de estructura."
+        )
+
+    return pd.read_excel(ruta, sheet_name=sheet_name, header=header_idx, usecols=columnas, engine=engine)
+
+
 def load_tc_inventory_sheets(tc_content: bytes):
     """Carga y valida las hojas Cargue y Requerido del Excel TC INVENTARIO."""
     tc_file = io.BytesIO(tc_content)
@@ -135,7 +162,9 @@ def generate_sabana_outlet(tc_content: bytes):
     df_sabana = df_sabana[(df_sabana['GRUPO']=='TEXTIL') & (df_sabana['Disponible']>0) & (df_sabana['Talla']!='U')]
     df_sabana.drop('REFERENCIA', axis=1, inplace=True)
 
-    df_maestra_dcto = pd.read_excel(RUTA_MAESTRA_DCTO, sheet_name='Maestra', header=2, usecols=['REF','OBS','CLASI ESTELARES','PROMOCIONAL ESCALA OUTLET'], engine='pyxlsb')
+    df_maestra_dcto = _leer_hoja_con_encabezado_dinamico(
+        RUTA_MAESTRA_DCTO, 'Maestra', ['REF', 'OBS', 'CLASI ESTELARES', 'PROMOCIONAL ESCALA OUTLET'], engine='pyxlsb'
+    )
     df_sabana = pd.merge(df_sabana, df_maestra_dcto, left_on='Referencia', right_on='REF', how='left')
     df_sabana.drop('REF', axis=1, inplace=True)
 

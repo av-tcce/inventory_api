@@ -444,7 +444,7 @@ async def generate_estructura_solicitud_endpoint(
 
 @router.post("/validacion-compromisos/generate", tags=["Validación de Compromisos"])
 async def generate_validacion_compromisos_endpoint(
-    archivo: UploadFile = File(..., description="Excel con columnas CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI"),
+    archivo: UploadFile = File(..., description="Excel con columnas CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO (CEDI es opcional)"),
     fecha: str = Form(..., description="Fecha a filtrar en tblAgotados (YYYY-MM-DD)")
 ):
     """

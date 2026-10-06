@@ -3,7 +3,8 @@ import pyodbc
 import pandas as pd
 from config import settings
 
-REQUIRED_SOURCE_COLUMNS = ['CODALMACEN', 'REFERENCIA', 'TALLA', 'COLOR', 'CANTIDAD', 'TIPO', 'CEDI']
+REQUIRED_SOURCE_COLUMNS = ['CODALMACEN', 'REFERENCIA', 'TALLA', 'COLOR', 'CANTIDAD', 'TIPO']
+OPTIONAL_SOURCE_COLUMNS = ['CEDI']
 SKU_PARTS = ['CODALMACEN', 'REFERENCIA', 'TALLA', 'COLOR']
 AGOTADOS_VALUE_COLS = ['STOCK', 'MINIMO', 'TRANSITO', 'STOCKTOTAL_INVENTARIO']
 
@@ -77,8 +78,9 @@ def _construir_sku(df: pd.DataFrame, columnas: list[str]) -> pd.Series:
 
 def generar_validacion_compromisos(source_content: bytes, fecha: str) -> io.BytesIO:
     """
-    A partir de un Excel de compromisos (CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI)
-    y una fecha, arma el SKU (CODALMACEN+REFERENCIA+TALLA+COLOR) y lo cruza contra:
+    A partir de un Excel de compromisos (CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO;
+    CEDI es opcional, solo informativa) y una fecha, arma el SKU (CODALMACEN+REFERENCIA+TALLA+COLOR)
+    y lo cruza contra:
       - tblAgotados (mismo SKU, para esa fecha): STOCK, MINIMO, TRANSITO, STOCKTOTAL_inventario.
       - transito_cedi (mismo SKU vía TIENDA+REFERENCIA+TALLA+COLOR, sin filtro de fecha): CANTIDAD
         comprometida pero aún no despachada, sumada por SKU en COMPROMETIDO_TRANSITO_CEDI.
@@ -207,7 +209,7 @@ def generar_validacion_compromisos(source_content: bytes, fecha: str) -> io.Byte
         df_resultado.loc[minimo_valido, 'STOCK_CON_COMPROMISO'] / df_resultado.loc[minimo_valido, 'MINIMO'] * 100
     ).round(1)
 
-    columnas_finales = REQUIRED_SOURCE_COLUMNS + ['SKU', 'COMPROMETIDO_TRANSITO_CEDI'] + AGOTADOS_VALUE_COLS + [
+    columnas_finales = REQUIRED_SOURCE_COLUMNS + OPTIONAL_SOURCE_COLUMNS + ['SKU', 'COMPROMETIDO_TRANSITO_CEDI'] + AGOTADOS_VALUE_COLS + [
         'NECESIDAD', 'NECESIDAD_CON_TRANSITO', 'CUBRIMIENTO', 'CUBRIMIENTO_CON_TRANSITO',
         'STOCK_CON_COMPROMISO', 'CUBRIMIENTO_CON_COMPROMISO'
     ]

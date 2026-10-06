@@ -2707,7 +2707,7 @@
                 Cruce de compromisos contra tblAgotados y transito_cedi
               </p>
               <p style="color:var(--text-muted); font-size: 13px; line-height: 1.5;">
-                Sube un Excel con columnas <strong>CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI</strong>.
+                Sube un Excel con columnas <strong>CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO</strong> (<strong>CEDI</strong> es opcional, solo informativa).
                 Se arma un <strong>SKU</strong> (CODALMACEN+REFERENCIA+TALLA+COLOR) y se cruza contra <strong>tblAgotados</strong> en la fecha
                 indicada (STOCK, MINIMO, TRANSITO, STOCKTOTAL_inventario) y contra <strong>transito_cedi</strong> (mismo SKU vía
                 TIENDA+REFERENCIA+TALLA+COLOR, sin filtro de fecha) para traer lo <strong>comprometido pero aún no despachado</strong>
@@ -2727,7 +2727,7 @@
                 <input type="file" id="input-validacion-compromisos" hidden onchange="updateValidacionCompromisosLabel(this)" />
                 <i data-lucide="file-spreadsheet"></i>
                 <h4 id="label-validacion-compromisos">Seleccionar Archivo de Compromisos</h4>
-                <p style="font-size:11px; margin-top:4px;">Requerido. Columnas: CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO, CEDI.</p>
+                <p style="font-size:11px; margin-top:4px;">Requerido. Columnas: CODALMACEN, REFERENCIA, TALLA, COLOR, CANTIDAD, TIPO (CEDI opcional).</p>
               </div>
 
               <button class="btn btn-primary" id="btn-validacion-compromisos" onclick="generarValidacionCompromisos()"
